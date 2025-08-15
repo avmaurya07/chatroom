@@ -98,8 +98,8 @@ export default function RoomList() {
       }`}
       sx={{ minHeight: "calc(100vh - 2rem)" }}
     >
-      <Box className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <div>
+      <Box className="flex flex-row justify-between items-start mb-8 gap-4">
+        <div className="flex-1">
           <Image
             src="/logo.svg"
             alt="BreakRoom Logo"
@@ -107,17 +107,21 @@ export default function RoomList() {
             height={50}
             className="mb-2"
           />
-          <Typography variant="subtitle1" color="textSecondary">
+          <Typography
+            variant="subtitle1"
+            color="textSecondary"
+            className="hidden sm:block"
+          >
             Take a break and chat anonymously
           </Typography>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center">
           {/* Theme toggle has been removed */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setOpenDialog(true)}
-            className="px-4 py-2"
+            className="px-4 py-2 whitespace-nowrap"
           >
             Create Room
           </Button>
