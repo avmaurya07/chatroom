@@ -14,8 +14,6 @@ import SendIcon from "@mui/icons-material/Send";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditIcon from "@mui/icons-material/Edit";
-import { useSocket } from "@/app/contexts/SocketContext";
-// We only need mode from useColorMode since toggleColorMode is commented out
 import { useColorMode } from "@/app/contexts/ThemeContext";
 import moment from "moment";
 import { generateRandomIdentity } from "@/app/lib/utils";
@@ -41,7 +39,6 @@ interface ChatRoomProps {
 
 export default function ChatRoom({ roomId }: ChatRoomProps) {
   const router = useRouter();
-  const { socket } = useSocket();
   const { mode } = useColorMode();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,63 +95,83 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   };
 
   // We're using state setter function without the value to avoid unused variable warning
-  const [, setActiveUsers] = useState<{
+  const [activeUsers, setActiveUsers] = useState<{
     count: number;
-    users: Array<{
-      userId: string;
-      userName: string;
-      userEmoji: string;
-      lastActive: string;
-    }>;
-  }>({ count: 0, users: [] });
+  }>({ count: 0 });
 
+  // Effect for user activity polling
   useEffect(() => {
-    if (socket && roomId) {
-      // Join room with user information
-      socket.emit("join-room", roomId, {
-        userId: userInfo.id,
-        userName: userInfo.name,
-        userEmoji: userInfo.emoji,
-      });
+    let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
-      socket.on("new-message", (message: Message) => {
-        setMessages((prev) => [...prev, message]);
-        scrollToBottom();
-      });
+    const pollUserActivity = async () => {
+      if (!isMounted) return;
 
-      socket.on(
-        "active-users-update",
-        (data: {
-          count: number;
-          users: Array<{
-            userId: string;
-            userName: string;
-            userEmoji: string;
-            lastActive: string;
-          }>;
-        }) => {
-          setActiveUsers(data);
-        }
-      );
-
-      // Emit user activity every minute to keep active status
-      const activityInterval = setInterval(() => {
-        socket.emit("user-activity", {
-          roomId,
-          userId: userInfo.id,
-          userName: userInfo.name,
-          userEmoji: userInfo.emoji,
+      try {
+        // Update user activity
+        await fetch(`/api/rooms/${roomId}/activity`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: userInfo.id,
+            userName: userInfo.name,
+            userEmoji: userInfo.emoji,
+          }),
         });
-      }, 60000);
+      } catch (error) {
+        console.error("Error updating user activity:", error);
+      }
 
-      return () => {
-        socket.emit("leave-room", roomId);
-        socket.off("new-message");
-        socket.off("active-users-update");
-        clearInterval(activityInterval);
-      };
-    }
-  }, [socket, roomId, userInfo.id, userInfo.name, userInfo.emoji]);
+      // Schedule next poll only after current one is complete
+      if (isMounted) {
+        timeoutId = setTimeout(pollUserActivity, 2000);
+      }
+    };
+
+    // Start polling
+    pollUserActivity();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [roomId, userInfo.id, userInfo.name, userInfo.emoji]);
+
+  // Separate effect for active users polling (every minute)
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
+
+    const pollActiveUsers = async () => {
+      if (!isMounted) return;
+
+      try {
+        const activeResponse = await fetch(`/api/rooms/${roomId}`);
+        const roomData = await activeResponse.json();
+
+        setActiveUsers({
+          count: roomData.activeUsersCount,
+        });
+      } catch (error) {
+        console.error("Error polling for active users:", error);
+      }
+
+      // Schedule next poll only after current one is complete
+      if (isMounted) {
+        timeoutId = setTimeout(pollActiveUsers, 60000); // 1 minute interval
+      }
+    };
+
+    // Start polling
+    pollActiveUsers();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [roomId]);
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
@@ -265,13 +282,27 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     }
   }, [roomId]);
 
-  useEffect(() => {
-    // Fetch existing messages
-    fetchMessages();
+  // Ref to track initial load
+  const initialLoadComplete = useRef(false);
 
-    // Fetch room information
-    fetchRoomInfo();
-  }, [fetchMessages, fetchRoomInfo]);
+  // Initial load effect - fetch messages and room info once
+  useEffect(() => {
+    const initializeRoom = async () => {
+      if (initialLoadComplete.current) return;
+      initialLoadComplete.current = true;
+
+      try {
+        // Fetch room information first
+        await fetchRoomInfo();
+        // Then fetch messages
+        await fetchMessages();
+      } catch (error) {
+        console.error("Error initializing room:", error);
+      }
+    };
+
+    initializeRoom();
+  }, [fetchMessages, fetchRoomInfo]); // Include dependencies to satisfy ESLint
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,7 +336,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
     try {
       // Check if we're online
-      if (navigator.onLine && socket) {
+      if (navigator.onLine) {
         // We're online, send to API
         const response = await fetch(`/api/rooms/${roomId}/messages`, {
           method: "POST",
@@ -329,9 +360,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
           // Cache the message
           await saveMessageToLocal({ ...sentMessage, roomId, synced: true });
-
-          // Emit to socket for real-time updates
-          socket.emit("send-message", sentMessage);
         }
       } else {
         // We're offline, queue the message for later
@@ -397,7 +425,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
               mode === "dark" ? "background.paper" : "background.paper",
           }}
         >
-          <div className="flex items-center flex-1 min-w-0 overflow-hidden mb-2 sm:mb-0">
+          <div className="flex items-center mb-2 sm:mb-0">
             <IconButton
               onClick={() => router.push("/")}
               className="mr-3 flex-shrink-0"
@@ -407,64 +435,79 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             >
               <ArrowBackIcon />
             </IconButton>
-            <div className="flex-1 min-w-0">
-              <Typography
-                variant="h6"
-                className={`font-semibold text-ellipsis truncate-fade ${
-                  roomError ? "text-error" : "text-primary"
-                }`}
-                title={roomInfo ? roomInfo.name : roomError || ""}
-                sx={{
-                  maxWidth: {
-                    xs: "unset", // Mobile screens
-                    sm: "unset", // Tablet screens
-                    md: "unset", // Desktop screens
-                    lg: "unset", // Large screens
-                  },
-                  "&:hover": {
-                    opacity: 0.9,
-                  },
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {roomLoading ? (
-                  <span className="inline-flex items-center">
-                    <span className="animate-pulse">Loading room...</span>
-                  </span>
-                ) : roomError ? (
-                  <span className="inline-flex items-center">
-                    <span>Error</span>
-                    <IconButton
-                      size="small"
-                      onClick={() => fetchRoomInfo()}
-                      title="Retry loading room"
-                      className="ml-2"
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                ) : roomInfo ? (
-                  <span
-                    className="room-name"
-                    style={{ maxWidth: "100%", display: "inline-block" }}
-                  >
-                    {roomInfo.name}
-                  </span>
-                ) : (
-                  "Unknown Room"
-                )}
-              </Typography>
-              {roomInfo && !roomLoading && !roomError && (
+            <div className="min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
                 <Typography
-                  variant="caption"
-                  color={mode === "dark" ? "text.primary" : "text.secondary"}
-                  className="flex items-center"
+                  variant="h6"
+                  className={`font-semibold text-ellipsis ${
+                    roomError ? "text-error" : "text-primary"
+                  }`}
+                  title={roomInfo ? roomInfo.name : roomError || ""}
+                  sx={{
+                    maxWidth: {
+                      xs: "100%",
+                      sm: "400px",
+                    },
+                    "&:hover": {
+                      opacity: 0.9,
+                    },
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
                 >
-                  {/* Active users display has been removed */}
+                  {roomLoading ? (
+                    <span className="inline-flex items-center">
+                      <span className="animate-pulse">Loading room...</span>
+                    </span>
+                  ) : roomError ? (
+                    <span className="inline-flex items-center">
+                      <span>Error</span>
+                      <IconButton
+                        size="small"
+                        onClick={() => fetchRoomInfo()}
+                        title="Retry loading room"
+                        className="ml-2"
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  ) : roomInfo ? (
+                    <span
+                      className="room-name"
+                      style={{ maxWidth: "100%", display: "inline-block" }}
+                    >
+                      {roomInfo.name}
+                    </span>
+                  ) : (
+                    "Unknown Room"
+                  )}
                 </Typography>
-              )}
+                {roomInfo && !roomLoading && !roomError && (
+                  <Box
+                    className={`inline-flex items-center px-2 py-1 rounded-full mt-1 sm:mt-0 ${
+                      mode === "dark"
+                        ? "bg-gray-700 text-green-400"
+                        : "bg-green-50 text-green-600"
+                    }`}
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full mr-2 ${
+                        activeUsers.count > 0
+                          ? "bg-green-400 animate-pulse"
+                          : "bg-gray-400"
+                      }`}
+                    />
+                    <Typography
+                      variant="caption"
+                      className="font-medium whitespace-nowrap"
+                    >
+                      {activeUsers.count}{" "}
+                      {activeUsers.count === 1 ? "person" : "people"} online
+                    </Typography>
+                  </Box>
+                )}
+              </div>
             </div>
           </div>
           <Box className="flex items-center gap-2 sm:gap-3 flex-shrink-0">

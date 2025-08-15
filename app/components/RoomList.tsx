@@ -35,6 +35,7 @@ export default function RoomList() {
   });
 
   useEffect(() => {
+    // Fetch rooms once when component mounts
     fetchRooms();
   }, []);
 
