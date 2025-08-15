@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F9FAFB;
+  --foreground: #111827;
+  --paper-bg: #FFFFFF;
+  --paper-fg: #111827;
+  --border-color: #E5E7EB;
+  --primary: #4F46E5;
+  --primary-light: #818CF8;
+  --primary-dark: #3730A3;
+  --secondary: #10B981;
+  --secondary-light: #34D399;
+  --secondary-dark: #059669;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+}
+
+[data-theme="dark"] {
+  --background: #111827;
+  --foreground: #F9FAFB;
+  --paper-bg: #1F2937;
+  --paper-fg: #F3F4F6;
+  --border-color: #374151;
+  --primary: #818CF8;
+  --primary-light: #A5B4FC;
+  --primary-dark: #4F46E5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #111827;
+    --foreground: #F9FAFB;
+    --paper-bg: #1F2937;
+    --paper-fg: #F3F4F6;
+    --border-color: #374151;
+    --primary: #818CF8;
+    --primary-light: #A5B4FC;
+    --primary-dark: #4F46E5;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Apply transitions to all elements for smoother theme changes */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-light);
+}
+
+/* Custom utility classes */
+.text-primary {
+  color: var(--primary);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.bg-primary-light {
+  background-color: var(--primary-light);
+}
+
+.bg-primary-dark {
+  background-color: var(--primary-dark);
+}
+
+.text-secondary {
+  color: var(--secondary);
+}
+
+.bg-secondary {
+  background-color: var(--secondary);
+}
+
+.hover\:bg-primary-dark:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Message animations */
+.message-left {
+  animation: slideInLeft 0.3s ease-out;
+  transform-origin: left bottom;
+}
+
+.message-right {
+  animation: slideInRight 0.3s ease-out;
+  transform-origin: right bottom;
+}
+
+@keyframes slideInLeft {
+  0% { transform: translateX(-10px) scale(0.95); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  0% { transform: translateX(10px) scale(0.95); opacity: 0; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}

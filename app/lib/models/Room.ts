@@ -13,6 +13,16 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  activeUsers: {
+    type: Map,
+    of: {
+      userId: String,
+      userName: String,
+      userEmoji: String,
+      lastActive: Date,
+    },
+    default: new Map(),
+  },
   inviteLinks: [
     {
       code: String,

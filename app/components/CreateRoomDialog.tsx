@@ -8,8 +8,6 @@ import {
   DialogActions,
   TextField,
   Button,
-  FormControlLabel,
-  Switch,
 } from "@mui/material";
 
 interface CreateRoomDialogProps {
@@ -26,7 +24,6 @@ export default function CreateRoomDialog({
   onRoomCreated,
 }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +39,6 @@ export default function CreateRoomDialog({
         body: JSON.stringify({
           name,
           creatorId: userId,
-          isPrivate,
         }),
       });
 
@@ -63,15 +59,27 @@ export default function CreateRoomDialog({
 
   const handleClose = () => {
     setName("");
-    setIsPrivate(false);
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        elevation: 3,
+        className: "rounded-xl",
+      }}
+    >
       <form onSubmit={handleSubmit}>
-        <DialogTitle>Create New Room</DialogTitle>
-        <DialogContent>
+        <DialogTitle className="bg-gray-50 border-b border-gray-100">
+          <span className="text-xl font-semibold text-gray-800">
+            Create New BreakRoom
+          </span>
+        </DialogTitle>
+        <DialogContent className="pt-6 pb-4">
           <TextField
             autoFocus
             margin="dense"
@@ -80,22 +88,25 @@ export default function CreateRoomDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="mb-4"
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-              />
-            }
-            label="Private Room"
+            className="mb-6"
+            placeholder="Enter a name for your room"
+            helperText="Choose a descriptive name for your room"
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={isLoading}>
-            Create
+        <DialogActions className="bg-gray-50 border-t border-gray-100 p-3">
+          <Button
+            onClick={handleClose}
+            className="text-gray-700 hover:bg-gray-200"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={isLoading}
+            className="px-6"
+          >
+            {isLoading ? "Creating..." : "Create Room"}
           </Button>
         </DialogActions>
       </form>

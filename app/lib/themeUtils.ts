@@ -1,0 +1,53 @@
+"use client";
+
+/**
+ * This file contains utility functions for theme handling in the app
+ */
+
+import { PaletteMode } from "@mui/material";
+
+// Constants
+const THEME_MODE_KEY = "chatRoomThemeMode";
+
+/**
+ * Get the stored theme mode from localStorage or return the default
+ */
+export function getSavedThemeMode(): PaletteMode {
+  if (typeof window === "undefined") {
+    return "light"; // Default for SSR
+  }
+
+  try {
+    const savedMode = localStorage.getItem(
+      THEME_MODE_KEY
+    ) as PaletteMode | null;
+    return savedMode === "dark" || savedMode === "light" ? savedMode : "light";
+  } catch (e) {
+    console.error("Error accessing localStorage:", e);
+    return "light";
+  }
+}
+
+/**
+ * Save the theme mode to localStorage
+ */
+export function saveThemeMode(mode: PaletteMode): void {
+  if (typeof window === "undefined") {
+    return; // Do nothing during SSR
+  }
+
+  try {
+    localStorage.setItem(THEME_MODE_KEY, mode);
+  } catch (e) {
+    console.error("Error saving to localStorage:", e);
+  }
+}
+
+/**
+ * Toggle between light and dark mode
+ */
+export function toggleThemeMode(currentMode: PaletteMode): PaletteMode {
+  const newMode = currentMode === "light" ? "dark" : "light";
+  saveThemeMode(newMode);
+  return newMode;
+}

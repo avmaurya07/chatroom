@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/app/lib/mongodb";
 import { Room } from "@/app/lib/models/Room";
-import { generateInviteLink } from "@/app/lib/utils";
 
 export async function POST(request: Request) {
   try {
     await connectDB();
-    const { name, creatorId, isPrivate } = await request.json();
+    const { name, creatorId } = await request.json();
 
     // Check if user has reached room limit
     const userRooms = await Room.countDocuments({ creatorId });
@@ -20,8 +19,8 @@ export async function POST(request: Request) {
     const room = new Room({
       name,
       creatorId,
-      isPrivate,
-      inviteLinks: isPrivate ? [generateInviteLink(false)] : [],
+      isPrivate: false,
+      inviteLinks: [],
     });
 
     await room.save();
