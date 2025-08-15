@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import { createTheme, PaletteMode, ThemeOptions } from "@mui/material";
 import CssBaseline from "@mui/material/CssBaseline";
-import { getSavedThemeMode, saveThemeMode } from "@/app/lib/themeUtils";
+import { saveThemeMode } from "@/app/lib/themeUtils";
 
 // Define theme settings
 const getThemeSettings = (mode: PaletteMode): ThemeOptions => ({
@@ -128,8 +128,13 @@ const ColorModeContext = createContext<ColorModeContextType>({
 export const useColorMode = () => useContext(ColorModeContext);
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  // State to hold the current theme mode
-  const [mode, setMode] = useState<PaletteMode>(() => getSavedThemeMode());
+  // State to hold the current theme mode - always defaults to light mode
+  const [mode, setMode] = useState<PaletteMode>("light");
+
+  // Set light mode on initial load
+  useEffect(() => {
+    saveThemeMode("light");
+  }, []);
 
   // Function to toggle theme
   const toggleColorMode = () => {
