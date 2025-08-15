@@ -136,15 +136,32 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     setMode((prevMode) => {
       const newMode = prevMode === "light" ? "dark" : "light";
       saveThemeMode(newMode);
+
+      // Update HTML classes for Tailwind dark mode
+      if (typeof document !== "undefined") {
+        if (newMode === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      }
+
       return newMode;
     });
   };
 
   // Apply theme to document element
-  React.useLayoutEffect(() => {
+  useEffect(() => {
     // Set the data-theme attribute on document element
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-theme", mode);
+
+      // Ensure Tailwind dark mode class is in sync
+      if (mode === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
   }, [mode]);
 

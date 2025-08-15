@@ -9,7 +9,7 @@ export default async function RoomPage({
   const { id } = await params;
   return (
     <SocketProvider>
-      <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+      <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-white dark:from-gray-900 dark:to-gray-800">
         <ChatRoom roomId={id} />
       </main>
     </SocketProvider>

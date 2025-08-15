@@ -79,13 +79,13 @@ export default function RoomList() {
           </Typography>
         </div>
         <div className="flex items-center gap-4">
-          <Tooltip
+          {/* <Tooltip
             title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
           >
             <IconButton onClick={toggleColorMode}>
               {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
             </IconButton>
-          </Tooltip>
+          </Tooltip> */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}

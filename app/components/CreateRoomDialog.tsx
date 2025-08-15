@@ -25,6 +25,7 @@ export default function CreateRoomDialog({
 }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const maxRoomNameLength = 20;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +38,7 @@ export default function CreateRoomDialog({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
+          name: name.trim().substring(0, maxRoomNameLength),
           creatorId: userId,
         }),
       });
@@ -86,11 +87,14 @@ export default function CreateRoomDialog({
             label="Room Name"
             fullWidth
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) =>
+              setName(e.target.value.substring(0, maxRoomNameLength))
+            }
             required
             className="mb-6"
             placeholder="Enter a name for your room"
-            helperText="Choose a descriptive name for your room"
+            helperText={`Choose a descriptive name for your room (${name.length}/${maxRoomNameLength} characters)`}
+            inputProps={{ maxLength: maxRoomNameLength }}
           />
         </DialogContent>
         <DialogActions className="bg-gray-50 border-t border-gray-100 p-3">

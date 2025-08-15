@@ -38,6 +38,13 @@ export function saveThemeMode(mode: PaletteMode): void {
 
   try {
     localStorage.setItem(THEME_MODE_KEY, mode);
+
+    // Also update the HTML class for Tailwind dark mode
+    if (mode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   } catch (e) {
     console.error("Error saving to localStorage:", e);
   }

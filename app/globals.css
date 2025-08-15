@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./roomStyles.css";
 
 :root {
   --background: #F9FAFB;
@@ -47,6 +48,16 @@ body {
   color: var(--foreground);
   font-family: 'Inter', sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Add a class to control page visibility during theme loading */
+html.theme-initializing * {
+  transition: none !important;
+}
+
+/* Smooth theme transition */
+html {
+  transition: color-scheme 0.3s ease;
 }
 
 /* Apply transitions to all elements for smoother theme changes */

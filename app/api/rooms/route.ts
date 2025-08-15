@@ -7,6 +7,14 @@ export async function POST(request: Request) {
     await connectDB();
     const { name, creatorId } = await request.json();
 
+    // Validate room name
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Room name is required" },
+        { status: 400 }
+      );
+    }
+
     // Check if user has reached room limit
     const userRooms = await Room.countDocuments({ creatorId });
     if (userRooms >= 10) {
@@ -17,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const room = new Room({
-      name,
+      name: name.trim().substring(0, 20),
       creatorId,
       isPrivate: false,
       inviteLinks: [],

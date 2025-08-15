@@ -42,7 +42,12 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<{
     name: string;
+    _id: string;
+    lastActive: string;
+    activeUsersCount: number;
   } | null>(null);
+  const [roomLoading, setRoomLoading] = useState(true);
+  const [roomError, setRoomError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("userInfo");
@@ -136,13 +141,23 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     // Fetch room information
     const fetchRoomInfo = async () => {
       try {
+        setRoomLoading(true);
+        setRoomError(null);
         const response = await fetch(`/api/rooms/${roomId}`);
+
         if (response.ok) {
           const data = await response.json();
           setRoomInfo(data);
+        } else {
+          const errorData = await response.json();
+          setRoomError(errorData.error || "Failed to load room information");
+          console.error("Failed to fetch room info:", errorData);
         }
       } catch (error) {
+        setRoomError("An error occurred while fetching room data");
         console.error("Failed to fetch room info:", error);
+      } finally {
+        setRoomLoading(false);
       }
     };
 
@@ -199,63 +214,122 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     >
       <Paper elevation={2} className="h-full flex flex-col p-0 overflow-hidden">
         <Box
-          className={`flex items-center justify-between p-4 border-b ${
+          className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b ${
             mode === "dark" ? "border-gray-700" : "border-gray-200"
           }`}
+          sx={{
+            backgroundColor:
+              mode === "dark" ? "background.paper" : "background.paper",
+          }}
         >
-          <div className="flex items-center">
+          <div className="flex items-center flex-1 min-w-0 overflow-hidden mb-2 sm:mb-0">
             <IconButton
               onClick={() => router.push("/")}
-              className="mr-3"
+              className="mr-3 flex-shrink-0"
               aria-label="Back to rooms"
               title="Back to rooms"
               color="inherit"
             >
               <ArrowBackIcon />
             </IconButton>
-            <div>
-              <Typography variant="h5" className="font-semibold text-primary">
-                {roomInfo ? roomInfo.name : "BreakRoom Chat"}
+            <div className="flex-1 min-w-0">
+              <Typography
+                variant="h6"
+                className={`font-semibold text-ellipsis truncate-fade ${
+                  roomError ? "text-error" : "text-primary"
+                }`}
+                title={roomInfo ? roomInfo.name : roomError || ""}
+                sx={{
+                  maxWidth: {
+                    xs: "unset", // Mobile screens
+                    sm: "unset", // Tablet screens
+                    md: "unset", // Desktop screens
+                    lg: "unset", // Large screens
+                  },
+                  "&:hover": {
+                    opacity: 0.9,
+                  },
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {roomLoading ? (
+                  <span className="inline-flex items-center">
+                    <span className="animate-pulse">Loading room...</span>
+                  </span>
+                ) : roomError ? (
+                  <span className="inline-flex items-center">
+                    <span>Error</span>
+                    <IconButton
+                      size="small"
+                      onClick={() => fetchRoomInfo()}
+                      title="Retry loading room"
+                      className="ml-2"
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                ) : roomInfo ? (
+                  <span
+                    className="room-name"
+                    style={{ maxWidth: "100%", display: "inline-block" }}
+                  >
+                    {roomInfo.name}
+                  </span>
+                ) : (
+                  "Unknown Room"
+                )}
               </Typography>
-              {roomInfo && (
+              {roomInfo && !roomLoading && !roomError && (
                 <Typography
                   variant="caption"
                   color={mode === "dark" ? "text.primary" : "text.secondary"}
                   className="flex items-center"
                 >
-                  <span className="flex items-center">
+                  {/* <span className="flex items-center">
                     🌐 Public Room • {activeUsers.count} active{" "}
                     {activeUsers.count === 1 ? "user" : "users"}
-                  </span>
+                  </span> */}
                 </Typography>
               )}
             </div>
           </div>
-          <Box className="flex items-center gap-3">
-            <Tooltip
+          <Box className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* <Tooltip
               title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
             >
-              <IconButton onClick={toggleColorMode} className="mr-2">
+              <IconButton onClick={toggleColorMode} className="hidden sm:flex">
                 {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
               </IconButton>
-            </Tooltip>
+            </Tooltip> */}
             <Box
               className={`flex items-center ${
                 mode === "dark" ? "bg-gray-800" : "bg-gray-100"
               } p-2 rounded-full`}
+              sx={{
+                maxWidth: {
+                  xs: "unset",
+                  sm: "unset",
+                },
+              }}
             >
-              <Avatar className="bg-primary-light">{userInfo.emoji}</Avatar>
-              <Typography className="ml-2 font-medium">
+              <Avatar className="bg-primary-light flex-shrink-0">
+                {userInfo.emoji}
+              </Avatar>
+              <Typography className="ml-2 font-medium truncate">
                 {userInfo.name}
               </Typography>
-              <IconButton
-                onClick={regenerateIdentity}
-                size="small"
-                className="ml-1"
-                title="Change identity"
-              >
-                <RefreshIcon fontSize="small" />
-              </IconButton>
+              {userInfo.id !== "avmaurya07" && (
+                <IconButton
+                  onClick={regenerateIdentity}
+                  size="small"
+                  className="ml-1"
+                  title="Change identity"
+                >
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              )}
             </Box>
           </Box>
         </Box>

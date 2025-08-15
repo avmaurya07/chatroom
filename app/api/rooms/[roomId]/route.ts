@@ -15,23 +15,40 @@ export async function GET(
       return NextResponse.json({ error: "Room not found" }, { status: 404 });
     }
 
-    // Clean up inactive users (more than 5 minutes old)
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const activeUsersMap = room.activeUsers || new Map();
-
-    for (const [userId, userData] of activeUsersMap.entries()) {
-      if (new Date(userData.lastActive) < fiveMinutesAgo) {
-        activeUsersMap.delete(userId);
-      }
-    }
-
-    // If the activeUsers map changed, save the room
-    if (activeUsersMap.size !== room.activeUsers.size) {
-      room.activeUsers = activeUsersMap;
+    // Ensure activeUsers exists
+    if (!room.activeUsers) {
+      room.activeUsers = new Map();
       await room.save();
     }
 
-    // Calculate active users count
+    // Clean up inactive users (more than 5 minutes old)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const activeUsersMap = new Map(room.activeUsers);
+
+    try {
+      for (const [userId, userData] of activeUsersMap.entries()) {
+        if (
+          userData &&
+          userData.lastActive &&
+          new Date(userData.lastActive) < fiveMinutesAgo
+        ) {
+          activeUsersMap.delete(userId);
+        }
+      }
+
+      // Only save if there were changes
+      if (activeUsersMap.size !== room.activeUsers.size) {
+        room.activeUsers = activeUsersMap;
+        await room.save();
+      }
+    } catch (error) {
+      console.error("Error processing active users:", error);
+      // Reset the activeUsers map if there's an error
+      room.activeUsers = new Map();
+      await room.save();
+    }
+
+    // Calculate active users count safely
     const activeUsersCount = room.activeUsers ? room.activeUsers.size : 0;
 
     return NextResponse.json({

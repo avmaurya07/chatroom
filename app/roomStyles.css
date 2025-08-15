@@ -1,0 +1,52 @@
+/* Add these utility styles to globals.css */
+
+/* Truncate text with ellipsis */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Room name styles for better visibility */
+.room-name {
+  display: inline-block;
+  max-width: 100%;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-name:after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.room-name:hover:after {
+  width: 100%;
+}
+
+/* For very long room names, add subtle fadeout effect */
+.truncate-fade {
+  position: relative;
+}
+
+.truncate-fade:after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 30px;
+  background: linear-gradient(to right, rgba(255,255,255,0), var(--paper-bg));
+}
+
+[data-theme="dark"] .truncate-fade:after {
+  background: linear-gradient(to right, rgba(31,41,55,0), var(--paper-bg));
+}
