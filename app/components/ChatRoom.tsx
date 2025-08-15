@@ -425,88 +425,90 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
               mode === "dark" ? "background.paper" : "background.paper",
           }}
         >
-          <div className="flex items-center mb-2 sm:mb-0">
-            <IconButton
-              onClick={() => router.push("/")}
-              className="mr-3 flex-shrink-0"
-              aria-label="Back to rooms"
-              title="Back to rooms"
-              color="inherit"
-            >
-              <ArrowBackIcon />
-            </IconButton>
-            <div className="min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-                <Typography
-                  variant="h6"
-                  className={`font-semibold text-ellipsis ${
-                    roomError ? "text-error" : "text-primary"
-                  }`}
-                  title={roomInfo ? roomInfo.name : roomError || ""}
-                  sx={{
-                    maxWidth: {
-                      xs: "100%",
-                      sm: "400px",
-                    },
-                    "&:hover": {
-                      opacity: 0.9,
-                    },
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {roomLoading ? (
-                    <span className="inline-flex items-center">
-                      <span className="animate-pulse">Loading room...</span>
-                    </span>
-                  ) : roomError ? (
-                    <span className="inline-flex items-center">
-                      <span>Error</span>
-                      <IconButton
-                        size="small"
-                        onClick={() => fetchRoomInfo()}
-                        title="Retry loading room"
-                        className="ml-2"
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  ) : roomInfo ? (
-                    <span
-                      className="room-name"
-                      style={{ maxWidth: "100%", display: "inline-block" }}
-                    >
-                      {roomInfo.name}
-                    </span>
-                  ) : (
-                    "Unknown Room"
-                  )}
-                </Typography>
-                {roomInfo && !roomLoading && !roomError && (
-                  <Box
-                    className={`inline-flex items-center px-2 py-1 rounded-full mt-1 sm:mt-0 ${
-                      mode === "dark"
-                        ? "bg-gray-700 text-green-400"
-                        : "bg-green-50 text-green-600"
+          <div className="flex flex-row items-center justify-between w-full gap-2">
+            <div className="flex items-center min-w-0 flex-1">
+              <IconButton
+                onClick={() => router.push("/")}
+                className="mr-3 flex-shrink-0"
+                aria-label="Back to rooms"
+                title="Back to rooms"
+                color="inherit"
+              >
+                <ArrowBackIcon />
+              </IconButton>
+              <div>
+                <div className="flex flex-row items-center gap-2 min-w-0 overflow-hidden">
+                  <Typography
+                    variant="h6"
+                    className={`font-semibold text-ellipsis ${
+                      roomError ? "text-error" : "text-primary"
                     }`}
+                    title={roomInfo ? roomInfo.name : roomError || ""}
+                    sx={{
+                      maxWidth: {
+                        xs: "100%",
+                        sm: "400px",
+                      },
+                      "&:hover": {
+                        opacity: 0.9,
+                      },
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
                   >
-                    <div
-                      className={`w-2 h-2 rounded-full mr-2 ${
-                        activeUsers.count > 0
-                          ? "bg-green-400 animate-pulse"
-                          : "bg-gray-400"
+                    {roomLoading ? (
+                      <span className="inline-flex items-center">
+                        <span className="animate-pulse">Loading room...</span>
+                      </span>
+                    ) : roomError ? (
+                      <span className="inline-flex items-center">
+                        <span>Error</span>
+                        <IconButton
+                          size="small"
+                          onClick={() => fetchRoomInfo()}
+                          title="Retry loading room"
+                          className="ml-2"
+                        >
+                          <RefreshIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    ) : roomInfo ? (
+                      <span
+                        className="room-name"
+                        style={{ maxWidth: "100%", display: "inline-block" }}
+                      >
+                        {roomInfo.name}
+                      </span>
+                    ) : (
+                      "Unknown Room"
+                    )}
+                  </Typography>
+                  {roomInfo && !roomLoading && !roomError && (
+                    <Box
+                      className={`inline-flex items-center px-2 py-1 rounded-full mt-1 sm:mt-0 ${
+                        mode === "dark"
+                          ? "bg-gray-700 text-green-400"
+                          : "bg-green-50 text-green-600"
                       }`}
-                    />
-                    <Typography
-                      variant="caption"
-                      className="font-medium whitespace-nowrap"
                     >
-                      {activeUsers.count}{" "}
-                      {activeUsers.count === 1 ? "person" : "people"} online
-                    </Typography>
-                  </Box>
-                )}
+                      <div
+                        className={`w-2 h-2 rounded-full mr-2 ${
+                          activeUsers.count > 0
+                            ? "bg-green-400 animate-pulse"
+                            : "bg-gray-400"
+                        }`}
+                      />
+                      <Typography
+                        variant="caption"
+                        className="font-medium whitespace-nowrap"
+                      >
+                        {activeUsers.count}{" "}
+                        {activeUsers.count === 1 ? "person" : "people"} online
+                      </Typography>
+                    </Box>
+                  )}
+                </div>
               </div>
             </div>
           </div>
