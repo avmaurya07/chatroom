@@ -82,16 +82,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     if (typeof window !== "undefined") {
       localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
     }
-
-    // Update user info in the room
-    if (socket && roomId) {
-      socket.emit("user-activity", {
-        roomId,
-        userId: userInfo.id,
-        userName: name,
-        userEmoji: emoji,
-      });
-    }
   };
 
   // We're using state setter function without the value to avoid unused variable warning
