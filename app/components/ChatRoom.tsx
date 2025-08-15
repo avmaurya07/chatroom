@@ -8,10 +8,13 @@ import {
   IconButton,
   Typography,
   Avatar,
+  Button,
+  Tooltip,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
 import { useSocket } from "@/app/contexts/SocketContext";
 // We only need mode from useColorMode since toggleColorMode is commented out
 import { useColorMode } from "@/app/contexts/ThemeContext";
@@ -19,6 +22,7 @@ import moment from "moment";
 import { generateRandomIdentity } from "@/app/lib/utils";
 import { useRouter } from "next/navigation";
 import ConnectionStatus from "./ConnectionStatus";
+import UserProfileEditor from "./UserProfileEditor";
 
 interface Message {
   _id: string;
@@ -49,6 +53,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   } | null>(null);
   const [roomLoading, setRoomLoading] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [userInfo, setUserInfo] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("userInfo");
@@ -64,6 +69,31 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleUpdateUserInfo = (name: string, emoji: string) => {
+    const updatedUserInfo = {
+      ...userInfo,
+      name,
+      emoji,
+    };
+
+    setUserInfo(updatedUserInfo);
+
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
+    }
+
+    // Update user info in the room
+    if (socket && roomId) {
+      socket.emit("user-activity", {
+        roomId,
+        userId: userInfo.id,
+        userName: name,
+        userEmoji: emoji,
+      });
+    }
   };
 
   // We're using state setter function without the value to avoid unused variable warning
@@ -449,16 +479,28 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
               <Typography className="ml-2 font-medium truncate">
                 {userInfo.name}
               </Typography>
-              {userInfo.id !== "avmaurya07" && (
-                <IconButton
-                  onClick={regenerateIdentity}
-                  size="small"
-                  className="ml-1"
-                  title="Change identity"
-                >
-                  <RefreshIcon fontSize="small" />
-                </IconButton>
-              )}
+              <Box sx={{ display: "flex" }}>
+                <Tooltip title="Edit profile">
+                  <IconButton
+                    onClick={() => setProfileEditorOpen(true)}
+                    size="small"
+                    className="ml-1"
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {userInfo.id !== "avmaurya07" && (
+                  <Tooltip title="Generate random identity">
+                    <IconButton
+                      onClick={regenerateIdentity}
+                      size="small"
+                      className="ml-1"
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
             </Box>
           </Box>
         </Box>
@@ -570,6 +612,15 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
       {/* Connection status indicator */}
       <ConnectionStatus />
+
+      {/* User Profile Editor Dialog */}
+      <UserProfileEditor
+        open={profileEditorOpen}
+        onClose={() => setProfileEditorOpen(false)}
+        currentName={userInfo.name}
+        currentEmoji={userInfo.emoji}
+        onSave={handleUpdateUserInfo}
+      />
     </Box>
   );
 }

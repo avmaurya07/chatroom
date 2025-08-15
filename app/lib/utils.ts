@@ -56,7 +56,7 @@ const nouns = [
   "Cherub",
 ];
 
-const emojis = [
+export const emojis = [
   "🐨",
   "🐱",
   "🐰",
@@ -84,7 +84,6 @@ const emojis = [
   "🐙",
   "🦉",
   "🦖",
-  "�",
   "🦒",
   "🦓",
 ];
