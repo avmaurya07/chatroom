@@ -8,7 +8,7 @@
 interface OfflineMessage {
   id?: number;
   url: string;
-  data: any;
+  data: Record<string, unknown>;
   timestamp: number;
 }
 
@@ -39,7 +39,7 @@ export const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("ChatroomOfflineDB", 1);
 
-    request.onerror = (event) => {
+    request.onerror = () => {
       console.error("IndexedDB error:", request.error);
       reject(request.error);
     };
@@ -80,7 +80,7 @@ export const openDB = (): Promise<IDBDatabase> => {
 // Queue a message for sync when online
 export const queueMessageForSync = async (
   roomId: string,
-  message: any
+  message: Record<string, unknown>
 ): Promise<number | undefined> => {
   try {
     const db = await openDB();
@@ -101,13 +101,17 @@ export const queueMessageForSync = async (
 
     // Also save to local messages store
     await saveMessageToLocal({
-      ...message,
+      ...(message as unknown as Partial<ChatMessage>),
       _id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       pending: true,
       synced: false,
-    });
+    } as ChatMessage);
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
 
     // Try to register for background sync
     if ("serviceWorker" in navigator && "SyncManager" in window) {
@@ -137,7 +141,11 @@ export const saveMessageToLocal = async (
       request.onerror = () => reject(request.error);
     });
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (error) {
     console.error("Failed to save message locally:", error);
   }
@@ -159,7 +167,11 @@ export const getLocalMessages = async (
       request.onerror = () => reject(request.error);
     });
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
 
     // Sort by creation date
     return messages.sort(
@@ -185,7 +197,11 @@ export const saveRoomToLocal = async (room: OfflineRoom): Promise<void> => {
       request.onerror = () => reject(request.error);
     });
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (error) {
     console.error("Failed to save room locally:", error);
   }
@@ -204,7 +220,11 @@ export const getLocalRooms = async (): Promise<OfflineRoom[]> => {
       request.onerror = () => reject(request.error);
     });
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
 
     // Sort by last active date, most recent first
     return rooms.sort(
@@ -234,7 +254,12 @@ export const getLocalRoom = async (
       }
     );
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
     return room || null;
   } catch (error) {
     console.error("Failed to get local room:", error);
@@ -255,7 +280,12 @@ export const getOfflineMessageCount = async (): Promise<number> => {
       request.onerror = () => reject(request.error);
     });
 
-    await tx.complete;
+    // Wait for the transaction to complete
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+
     return count;
   } catch (error) {
     console.error("Failed to get offline message count:", error);

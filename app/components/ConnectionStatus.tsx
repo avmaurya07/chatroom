@@ -1,11 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Button, Chip, Badge } from "@mui/material";
+import { Box, Typography, Button, Chip } from "@mui/material";
 import WifiIcon from "@mui/icons-material/Wifi";
 import WifiOffIcon from "@mui/icons-material/WifiOff";
 import SyncIcon from "@mui/icons-material/Sync";
 import { getOfflineMessageCount } from "@/app/lib/offlineStorage";
+
+// Define an interface for the SyncManager
+interface SyncManager {
+  register(tag: string): Promise<void>;
+  getTags(): Promise<string[]>;
+}
+
+// Extend the ServiceWorkerRegistration interface
+interface ExtendedServiceWorkerRegistration extends ServiceWorkerRegistration {
+  sync: SyncManager;
+}
 
 export default function ConnectionStatus() {
   const [isOnline, setIsOnline] = useState<boolean>(
@@ -51,7 +62,10 @@ export default function ConnectionStatus() {
           // Trigger sync via service worker
           if ("serviceWorker" in navigator && "SyncManager" in window) {
             const registration = await navigator.serviceWorker.ready;
-            await registration.sync.register("sync-messages");
+            // Cast to our extended interface
+            await (
+              registration as ExtendedServiceWorkerRegistration
+            ).sync.register("sync-messages");
 
             // Give some time for sync to complete then check again
             setTimeout(async () => {
@@ -81,7 +95,9 @@ export default function ConnectionStatus() {
       // Trigger sync via service worker
       if ("serviceWorker" in navigator && "SyncManager" in window) {
         const registration = await navigator.serviceWorker.ready;
-        await registration.sync.register("sync-messages");
+        await (registration as ExtendedServiceWorkerRegistration).sync.register(
+          "sync-messages"
+        );
 
         // Give some time for sync to complete then check again
         setTimeout(async () => {

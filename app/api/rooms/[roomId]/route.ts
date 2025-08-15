@@ -27,10 +27,18 @@ export async function GET(
 
     try {
       for (const [userId, userData] of activeUsersMap.entries()) {
+        // Define the type for userData
+        const typedUserData = userData as {
+          userId?: string;
+          userName?: string;
+          userEmoji?: string;
+          lastActive?: Date | string;
+        };
+
         if (
-          userData &&
-          userData.lastActive &&
-          new Date(userData.lastActive) < fiveMinutesAgo
+          typedUserData &&
+          typedUserData.lastActive &&
+          new Date(typedUserData.lastActive) < fiveMinutesAgo
         ) {
           activeUsersMap.delete(userId);
         }

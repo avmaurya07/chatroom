@@ -1,17 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
+import { Box, Paper, Typography, Button } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
 import { useRouter } from "next/navigation";
 import CreateRoomDialog from "./CreateRoomDialog";
 import { generateRandomIdentity } from "@/app/lib/utils";
@@ -29,7 +20,7 @@ export default function RoomList() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const router = useRouter();
-  const { mode, toggleColorMode } = useColorMode();
+  const { mode } = useColorMode();
   const [userId] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("userId");
@@ -115,13 +106,7 @@ export default function RoomList() {
           </Typography>
         </div>
         <div className="flex items-center gap-4">
-          {/* <Tooltip
-            title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
-          >
-            <IconButton onClick={toggleColorMode}>
-              {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-            </IconButton>
-          </Tooltip> */}
+          {/* Theme toggle has been removed */}
           <Button
             variant="contained"
             startIcon={<AddIcon />}

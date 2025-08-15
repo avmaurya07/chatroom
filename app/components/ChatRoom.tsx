@@ -8,14 +8,12 @@ import {
   IconButton,
   Typography,
   Avatar,
-  Tooltip,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
 import { useSocket } from "@/app/contexts/SocketContext";
+// We only need mode from useColorMode since toggleColorMode is commented out
 import { useColorMode } from "@/app/contexts/ThemeContext";
 import moment from "moment";
 import { generateRandomIdentity } from "@/app/lib/utils";
@@ -40,7 +38,7 @@ interface ChatRoomProps {
 export default function ChatRoom({ roomId }: ChatRoomProps) {
   const router = useRouter();
   const { socket, isConnected } = useSocket();
-  const { mode, toggleColorMode } = useColorMode();
+  const { mode } = useColorMode();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<{
@@ -68,7 +66,8 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const [activeUsers, setActiveUsers] = useState<{
+  // We're using state setter function without the value to avoid unused variable warning
+  const [, setActiveUsers] = useState<{
     count: number;
     users: Array<{
       userId: string;
@@ -426,22 +425,13 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                   color={mode === "dark" ? "text.primary" : "text.secondary"}
                   className="flex items-center"
                 >
-                  {/* <span className="flex items-center">
-                    🌐 Public Room • {activeUsers.count} active{" "}
-                    {activeUsers.count === 1 ? "user" : "users"}
-                  </span> */}
+                  {/* Active users display has been removed */}
                 </Typography>
               )}
             </div>
           </div>
           <Box className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* <Tooltip
-              title={`Switch to ${mode === "light" ? "dark" : "light"} mode`}
-            >
-              <IconButton onClick={toggleColorMode} className="hidden sm:flex">
-                {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-              </IconButton>
-            </Tooltip> */}
+            {/* Theme toggling functionality has been removed */}
             <Box
               className={`flex items-center ${
                 mode === "dark" ? "bg-gray-800" : "bg-gray-100"
