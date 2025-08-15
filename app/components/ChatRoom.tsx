@@ -565,7 +565,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                     variant="caption"
                     className="block mt-1 opacity-75"
                   >
-                    {moment(message.createdAt).format("LT")}
+                    {moment(message.createdAt).fromNow()}
                     {message.pending && " • Sending..."}
                   </Typography>
                 </Box>
