@@ -45,7 +45,7 @@ export function saveThemeMode(mode: PaletteMode): void {
   }
 
   try {
-    localStorage.setItem(THEME_MODE_KEY, mode);
+    localStorage.setItem(THEME_MODE_KEY, "light");
 
     // Also update the HTML class for Tailwind dark mode
     if (mode === "dark") {
