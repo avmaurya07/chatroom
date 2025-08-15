@@ -87,7 +87,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   // We're using state setter function without the value to avoid unused variable warning
   const [activeUsers, setActiveUsers] = useState<{
     count: number;
-  }>({ count: 0 });
+  }>({ count: 1 });
 
   // Effect for user activity polling
   useEffect(() => {
