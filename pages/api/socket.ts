@@ -18,6 +18,14 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
     const io = new Server(httpServer, {
       path: path,
       addTrailingSlash: false,
+      cors: {
+        origin:
+          process.env.NODE_ENV === "production"
+            ? ["https://chatroom-puce-kappa.vercel.app"]
+            : ["http://localhost:3000"],
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
     });
 
     io.on("connection", (socket) => {

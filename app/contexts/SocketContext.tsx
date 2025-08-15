@@ -23,14 +23,29 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
     const socketInstance = io(socketUrl, {
       path: "/api/socket",
+      transports: ["polling", "websocket"], // Start with polling then upgrade to websocket
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
     });
 
     socketInstance.on("connect", () => {
       setIsConnected(true);
+      console.log("Socket connected successfully");
     });
 
     socketInstance.on("disconnect", () => {
       setIsConnected(false);
+      console.log("Socket disconnected");
+    });
+
+    socketInstance.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
+    });
+
+    socketInstance.on("error", (err) => {
+      console.error("Socket error:", err);
     });
 
     setSocket(socketInstance);
