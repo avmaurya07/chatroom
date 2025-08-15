@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -33,16 +33,18 @@ export default function UserProfileEditor({
 }: UserProfileEditorProps) {
   const [name, setName] = useState(currentName);
   const [emoji, setEmoji] = useState(currentEmoji);
-  const [saving, setSaving] = useState(false);
+
+  // Sync state with props when dialog opens
+  useEffect(() => {
+    if (open) {
+      setName(currentName);
+      setEmoji(currentEmoji);
+    }
+  }, [open, currentName, currentEmoji]);
 
   const handleSave = () => {
-    setSaving(true);
-    // Add a small delay to show the loading state
-    setTimeout(() => {
-      onSave(name, emoji);
-      setSaving(false);
-      onClose();
-    }, 500);
+    onSave(name, emoji);
+    onClose();
   };
 
   return (
@@ -50,7 +52,7 @@ export default function UserProfileEditor({
       <DialogTitle>Edit Your Profile</DialogTitle>
       <DialogContent>
         <Grid container spacing={2}>
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid item xs={12} sx={{ mt: 2 } as any}>
             <TextField
               autoFocus
               label="Your Name"
@@ -66,17 +68,19 @@ export default function UserProfileEditor({
               Choose your emoji
             </Typography>
             <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                gap: 1,
-                maxHeight: "200px",
-                overflowY: "auto",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                p: 1,
-              }}
+              sx={
+                {
+                  display: "grid",
+                  gridTemplateColumns: "repeat(5, 1fr)",
+                  gap: 1,
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  p: 1,
+                } as any
+              }
             >
               {emojis.map((e, index) => (
                 <IconButton
@@ -95,7 +99,7 @@ export default function UserProfileEditor({
               ))}
             </Box>
           </Grid>
-          <Grid item xs={12} sx={{ mt: 2 }}>
+          <Grid item xs={12} sx={{ mt: 2 } as any}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography variant="subtitle1">Preview:</Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -108,14 +112,8 @@ export default function UserProfileEditor({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleSave}
-          variant="contained"
-          color="primary"
-          disabled={saving}
-          className={saving ? "animate-pulse" : ""}
-        >
-          {saving ? "Saving..." : "Save"}
+        <Button onClick={handleSave} variant="contained" color="primary">
+          Save
         </Button>
       </DialogActions>
     </Dialog>
