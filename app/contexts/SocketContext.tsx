@@ -18,40 +18,63 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Use environment variable for production, fallback to localhost for development
-    const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
-    const socketInstance = io(socketUrl, {
-      path: "/api/socket",
-      transports: ["polling", "websocket"], // Start with polling then upgrade to websocket
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000,
-    });
+    // Initialize socket connection
+    const initSocket = async () => {
+      try {
+        // Ensure socket API endpoint is set up first
+        await fetch("/api/socket");
 
-    socketInstance.on("connect", () => {
-      setIsConnected(true);
-      console.log("Socket connected successfully");
-    });
+        // Create socket connection
+        const socketUrl = window.location.origin;
+        console.log("Connecting to socket at:", socketUrl);
 
-    socketInstance.on("disconnect", () => {
-      setIsConnected(false);
-      console.log("Socket disconnected");
-    });
+        const socketInstance = io(socketUrl, {
+          path: "/api/socket",
+          transports: ["polling", "websocket"],
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 1000,
+          timeout: 30000,
+          forceNew: true,
+        });
 
-    socketInstance.on("connect_error", (err) => {
-      console.error("Socket connection error:", err.message);
-    });
+        socketInstance.on("connect", () => {
+          setIsConnected(true);
+          console.log("Socket connected successfully");
+        });
 
-    socketInstance.on("error", (err) => {
-      console.error("Socket error:", err);
-    });
+        socketInstance.on("disconnect", () => {
+          setIsConnected(false);
+          console.log("Socket disconnected");
+        });
 
-    setSocket(socketInstance);
+        socketInstance.on("connect_error", (err) => {
+          console.error("Socket connection error:", err.message);
+        });
+
+        socketInstance.on("error", (err) => {
+          console.error("Socket error:", err);
+        });
+
+        setSocket(socketInstance);
+
+        return socketInstance;
+      } catch (error) {
+        console.error("Failed to initialize socket:", error);
+        return null;
+      }
+    };
+
+    let socketInstance: Socket | null = null;
+
+    initSocket().then((instance) => {
+      socketInstance = instance;
+    });
 
     return () => {
-      socketInstance.disconnect();
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
     };
   }, []);
 

@@ -11,18 +11,23 @@ export const config = {
   },
 };
 
-const ioHandler = (req: NextApiRequest, res: NextApiResponseWithSocket) => {
+const ioHandler = async (
+  req: NextApiRequest,
+  res: NextApiResponseWithSocket
+) => {
+  // Wait to make sure server is ready
+  await connectDB();
+
   if (!res.socket.server.io) {
+    console.log("Initializing Socket.io server...");
     const path = "/api/socket";
     const httpServer = res.socket.server as unknown as NetServer;
     const io = new Server(httpServer, {
       path: path,
       addTrailingSlash: false,
+      pingTimeout: 60000, // Increase ping timeout
       cors: {
-        origin:
-          process.env.NODE_ENV === "production"
-            ? ["https://chatroom-puce-kappa.vercel.app"]
-            : ["http://localhost:3000"],
+        origin: "*", // Allow any origin for development, update for production
         methods: ["GET", "POST"],
         credentials: true,
       },

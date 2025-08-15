@@ -9,3 +9,15 @@ export interface NextApiResponseWithSocket extends NextApiResponse {
     };
   };
 }
+
+export interface SocketUser {
+  userId: string;
+  userName: string;
+  userEmoji: string;
+  lastActive: string;
+}
+
+export interface ActiveUsersUpdate {
+  count: number;
+  users: SocketUser[];
+}
