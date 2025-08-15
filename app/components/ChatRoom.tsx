@@ -23,6 +23,7 @@ import { generateRandomIdentity } from "@/app/lib/utils";
 import { useRouter } from "next/navigation";
 import ConnectionStatus from "./ConnectionStatus";
 import UserProfileEditor from "./UserProfileEditor";
+import MessageSkeleton from "./MessageSkeleton";
 
 interface Message {
   _id: string;
@@ -41,9 +42,10 @@ interface ChatRoomProps {
 
 export default function ChatRoom({ roomId }: ChatRoomProps) {
   const router = useRouter();
-  const { socket, isConnected } = useSocket();
+  const { socket } = useSocket();
   const { mode } = useColorMode();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<{
     name: string;
@@ -156,6 +158,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   }, [socket, roomId, userInfo.id, userInfo.name, userInfo.emoji]);
 
   const fetchMessages = useCallback(async () => {
+    setLoading(true);
     try {
       // Try to fetch from API first
       let apiMessages: Message[] = [];
@@ -201,6 +204,8 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
+    } finally {
+      setLoading(false);
     }
   }, [roomId]);
 
@@ -376,11 +381,14 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
   return (
     <Box
-      className={`h-screen flex flex-col p-6 ${
+      className={`h-screen flex flex-col p-3 md:p-6 ${
         mode === "dark" ? "bg-gray-900" : "bg-gray-50"
       }`}
     >
-      <Paper elevation={2} className="h-full flex flex-col p-0 overflow-hidden">
+      <Paper
+        elevation={2}
+        className="h-full flex flex-col p-0 overflow-hidden max-w-[1600px] mx-auto w-full"
+      >
         <Box
           className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b ${
             mode === "dark" ? "border-gray-700" : "border-gray-200"
@@ -480,25 +488,28 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                 {userInfo.name}
               </Typography>
               <Box sx={{ display: "flex" }}>
-                <Tooltip title="Edit profile">
-                  <IconButton
-                    onClick={() => setProfileEditorOpen(true)}
-                    size="small"
-                    className="ml-1"
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
                 {userInfo.id !== "avmaurya07" && (
-                  <Tooltip title="Generate random identity">
-                    <IconButton
-                      onClick={regenerateIdentity}
-                      size="small"
-                      className="ml-1"
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip title="Edit profile">
+                      <IconButton
+                        onClick={() => setProfileEditorOpen(true)}
+                        size="small"
+                        className="ml-1"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Generate random identity">
+                      <IconButton
+                        onClick={regenerateIdentity}
+                        size="small"
+                        className="ml-1"
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
                 )}
               </Box>
             </Box>
@@ -510,53 +521,64 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             mode === "dark" ? "bg-gray-800" : "bg-gray-50"
           }`}
         >
-          {messages.map((message) => (
-            <Box
-              key={message._id}
-              className={`mb-4 ${
-                message.userId === userInfo.id ? "text-right" : "text-left"
-              } ${message.pending ? "opacity-70" : ""}`}
-            >
+          {roomLoading || loading ? (
+            <MessageSkeleton count={5} />
+          ) : messages.length > 0 ? (
+            messages.map((message) => (
               <Box
-                className={`inline-block max-w-[70%] ${
-                  message.userId === userInfo.id
-                    ? mode === "dark"
-                      ? "bg-primary text-white message-right"
-                      : "bg-primary-light text-white message-right"
-                    : mode === "dark"
-                    ? "bg-gray-700 text-white border border-gray-600 message-left"
-                    : "bg-white border border-gray-200 message-left"
-                } rounded-lg p-3 shadow-sm transition-colors`}
-                sx={{
-                  boxShadow:
+                key={message._id}
+                className={`mb-4 ${
+                  message.userId === userInfo.id ? "text-right" : "text-left"
+                } ${message.pending ? "opacity-70" : ""}`}
+              >
+                <Box
+                  className={`inline-block max-w-[70%] ${
                     message.userId === userInfo.id
                       ? mode === "dark"
-                        ? "0 2px 5px rgba(0,0,0,0.3)"
-                        : "0 2px 5px rgba(0,0,0,0.1)"
+                        ? "bg-primary text-white message-right"
+                        : "bg-primary-light text-white message-right"
                       : mode === "dark"
-                      ? "0 1px 3px rgba(0,0,0,0.2)"
-                      : "0 1px 2px rgba(0,0,0,0.05)",
-                }}
-              >
-                <Box className="flex items-center gap-2 mb-1">
-                  <span>{message.userEmoji}</span>
-                  <Typography variant="subtitle2" className="font-medium">
-                    {message.userName}
+                      ? "bg-gray-700 text-white border border-gray-600 message-left"
+                      : "bg-white border border-gray-200 message-left"
+                  } rounded-lg p-3 shadow-sm transition-colors`}
+                  sx={{
+                    boxShadow:
+                      message.userId === userInfo.id
+                        ? mode === "dark"
+                          ? "0 2px 5px rgba(0,0,0,0.3)"
+                          : "0 2px 5px rgba(0,0,0,0.1)"
+                        : mode === "dark"
+                        ? "0 1px 3px rgba(0,0,0,0.2)"
+                        : "0 1px 2px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <Box className="flex items-center gap-2 mb-1">
+                    <span>{message.userEmoji}</span>
+                    <Typography variant="subtitle2" className="font-medium">
+                      {message.userName}
+                    </Typography>
+                  </Box>
+                  <Typography className="text-left">
+                    {message.content}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    className="block mt-1 opacity-75"
+                  >
+                    {moment(message.createdAt).format("LT")}
+                    {message.pending && " • Sending..."}
                   </Typography>
                 </Box>
-                <Typography className="text-left">{message.content}</Typography>
-                <Typography variant="caption" className="block mt-1 opacity-75">
-                  {moment(message.createdAt).fromNow()}
-                  {message.pending && (
-                    <span className="ml-2" title="Waiting to be sent">
-                      ⏳
-                    </span>
-                  )}
-                </Typography>
               </Box>
+            ))
+          ) : (
+            <Box className="text-center py-10">
+              <Typography variant="body1" color="textSecondary">
+                No messages yet. Be the first to say hello!
+              </Typography>
             </Box>
-          ))}
-          <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef}></div>
         </Box>
 
         <Box

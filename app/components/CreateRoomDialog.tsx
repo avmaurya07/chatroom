@@ -108,7 +108,7 @@ export default function CreateRoomDialog({
             type="submit"
             variant="contained"
             disabled={isLoading}
-            className="px-6"
+            className={`px-6 ${isLoading ? "animate-pulse" : ""}`}
           >
             {isLoading ? "Creating..." : "Create Room"}
           </Button>

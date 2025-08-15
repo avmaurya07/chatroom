@@ -13,9 +13,11 @@ export default function Home() {
 
   return (
     <SocketProvider>
-      <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-        <RoomList />
-        <InstallPrompt />
+      <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-white animate-fade-in flex flex-col items-center">
+        <div className="w-full max-w-7xl px-4">
+          <RoomList />
+          <InstallPrompt />
+        </div>
       </main>
     </SocketProvider>
   );

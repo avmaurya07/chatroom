@@ -9,6 +9,8 @@ import { generateRandomIdentity } from "@/app/lib/utils";
 import { useColorMode } from "@/app/contexts/ThemeContext";
 import Image from "next/image";
 import ConnectionStatus from "./ConnectionStatus";
+import Loader from "./Loader";
+import RoomSkeleton from "./RoomSkeleton";
 
 interface Room {
   _id: string;
@@ -19,6 +21,8 @@ interface Room {
 export default function RoomList() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [navigating, setNavigating] = useState(false);
   const router = useRouter();
   const { mode } = useColorMode();
   const [userId] = useState(() => {
@@ -37,6 +41,7 @@ export default function RoomList() {
   }, []);
 
   const fetchRooms = async () => {
+    setLoading(true);
     try {
       // Try to fetch from API first
       let apiRooms: Room[] = [];
@@ -78,21 +83,24 @@ export default function RoomList() {
       }
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRoomClick = (roomId: string) => {
+    setNavigating(true);
     router.push(`/room/${roomId}`);
   };
 
   return (
     <Box
-      className={`p-6 max-w-6xl mx-auto ${
+      className={`p-6 mx-auto w-full ${
         mode === "dark" ? "bg-gray-900 text-white" : ""
       }`}
-      sx={{ minHeight: "100vh" }}
+      sx={{ minHeight: "calc(100vh - 2rem)" }}
     >
-      <Box className="flex justify-between items-center mb-8">
+      <Box className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div>
           <Image
             src="/logo.svg"
@@ -118,30 +126,42 @@ export default function RoomList() {
         </div>
       </Box>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {rooms.map((room) => (
-          <Paper
-            key={room._id}
-            className="p-6 cursor-pointer hover:shadow-lg transition-all duration-300 hover:translate-y-[-4px] border border-gray-100"
-            onClick={() => handleRoomClick(room._id)}
-            elevation={2}
-          >
-            <Typography variant="h6" className="mb-3 font-semibold">
-              {room.name}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-stagger-fade-in">
+        {loading ? (
+          <RoomSkeleton count={6} />
+        ) : rooms.length > 0 ? (
+          rooms.map((room) => (
+            <Paper
+              key={room._id}
+              className={`p-6 cursor-pointer hover:shadow-lg smooth-transition hover:translate-y-[-4px] border border-gray-100 ${
+                navigating ? "opacity-50" : ""
+              }`}
+              onClick={() => handleRoomClick(room._id)}
+              elevation={2}
+            >
+              <Typography variant="h6" className="mb-3 font-semibold truncate">
+                {room.name}
+              </Typography>
+              <div className="flex items-center justify-between">
+                <Typography
+                  variant="body2"
+                  className="py-1 px-2 rounded-full bg-emerald-100 text-emerald-800"
+                >
+                  🌐 Public
+                </Typography>
+                <Typography variant="caption" color="textSecondary">
+                  Active {new Date(room.lastActive).toLocaleDateString()}
+                </Typography>
+              </div>
+            </Paper>
+          ))
+        ) : (
+          <div className="col-span-3 text-center py-10">
+            <Typography variant="h6" color="textSecondary">
+              No rooms available. Create a new room to get started!
             </Typography>
-            <div className="flex items-center justify-between">
-              <Typography
-                variant="body2"
-                className="py-1 px-2 rounded-full bg-emerald-100 text-emerald-800"
-              >
-                🌐 Public
-              </Typography>
-              <Typography variant="caption" color="textSecondary">
-                Active {new Date(room.lastActive).toLocaleDateString()}
-              </Typography>
-            </div>
-          </Paper>
-        ))}
+          </div>
+        )}
       </div>
 
       <CreateRoomDialog

@@ -33,10 +33,16 @@ export default function UserProfileEditor({
 }: UserProfileEditorProps) {
   const [name, setName] = useState(currentName);
   const [emoji, setEmoji] = useState(currentEmoji);
+  const [saving, setSaving] = useState(false);
 
   const handleSave = () => {
-    onSave(name, emoji);
-    onClose();
+    setSaving(true);
+    // Add a small delay to show the loading state
+    setTimeout(() => {
+      onSave(name, emoji);
+      setSaving(false);
+      onClose();
+    }, 500);
   };
 
   return (
@@ -102,8 +108,14 @@ export default function UserProfileEditor({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} variant="contained" color="primary">
-          Save
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          color="primary"
+          disabled={saving}
+          className={saving ? "animate-pulse" : ""}
+        >
+          {saving ? "Saving..." : "Save"}
         </Button>
       </DialogActions>
     </Dialog>

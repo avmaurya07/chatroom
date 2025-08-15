@@ -50,6 +50,53 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Loading animations */
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+.animate-stagger-fade-in > * {
+  opacity: 0;
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+.animate-stagger-fade-in > *:nth-child(1) { animation-delay: 0.1s; }
+.animate-stagger-fade-in > *:nth-child(2) { animation-delay: 0.2s; }
+.animate-stagger-fade-in > *:nth-child(3) { animation-delay: 0.3s; }
+.animate-stagger-fade-in > *:nth-child(4) { animation-delay: 0.4s; }
+.animate-stagger-fade-in > *:nth-child(5) { animation-delay: 0.5s; }
+.animate-stagger-fade-in > *:nth-child(n+6) { animation-delay: 0.6s; }
+
+.smooth-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Custom keyframes */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* Add a class to control page visibility during theme loading */
 html.theme-initializing * {
   transition: none !important;
