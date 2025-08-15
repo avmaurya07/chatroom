@@ -21,7 +21,15 @@ export function getSavedThemeMode(): PaletteMode {
     const savedMode = localStorage.getItem(
       THEME_MODE_KEY
     ) as PaletteMode | null;
-    return savedMode === "dark" || savedMode === "light" ? savedMode : "light";
+
+    // Always default to "light" if no valid value is found
+    if (savedMode !== "dark" && savedMode !== "light") {
+      // If no valid theme is stored, save the default "light" theme
+      saveThemeMode("light");
+      return "light";
+    }
+
+    return savedMode;
   } catch (e) {
     console.error("Error accessing localStorage:", e);
     return "light";
