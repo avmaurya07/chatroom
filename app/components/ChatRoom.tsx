@@ -502,9 +502,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                     {message.userName}
                   </Typography>
                 </Box>
-                <Typography className="whitespace-pre-wrap break-words">
-                  {message.content}
-                </Typography>
+                <Typography className="text-left">{message.content}</Typography>
                 <Typography variant="caption" className="block mt-1 opacity-75">
                   {moment(message.createdAt).fromNow()}
                   {message.pending && (
@@ -533,7 +531,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              disabled={!isConnected}
               size="small"
               className={`rounded-full ${mode === "dark" ? "bg-gray-700" : ""}`}
               sx={{
@@ -562,11 +559,10 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             />
             <IconButton
               type="submit"
-              color="primary"
-              disabled={!isConnected || !newMessage.trim()}
-              className="bg-primary hover:bg-primary-dark text-white"
+              disabled={!newMessage.trim()}
+              className="text-blue-500"
             >
-              <SendIcon />
+              <SendIcon className="text-blue-500" />
             </IconButton>
           </form>
         </Box>
