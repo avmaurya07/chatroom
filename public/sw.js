@@ -18,46 +18,11 @@ const urlsToCache = [
   "/globals.css",
   "/roomStyles.css",
   "/sw.js",
-  "/offline.html", // We'll create this file later
+  "/offline.html",
+  "/404.html",
 ];
 
-// Create a new HTML page for offline fallback
-const createOfflinePage = async () => {
-  const cache = await caches.open(STATIC_CACHE_NAME);
-  const offlineResponse = new Response(
-    `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Chatroom - Offline</title>
-      <style>
-        body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; text-align: center; background-color: #f5f5f5; }
-        h1 { margin-bottom: 0.5em; }
-        p { margin-bottom: 1.5em; }
-        .container { max-width: 500px; padding: 2em; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .btn { padding: 0.5em 1em; background-color: #0070f3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
-        .offline-icon { font-size: 4em; margin-bottom: 0.5em; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="offline-icon">📶</div>
-        <h1>You're offline</h1>
-        <p>But don't worry! You can still access your cached chat rooms.</p>
-        <button class="btn" onclick="window.location.href='/'">Go to Cached Rooms</button>
-      </div>
-    </body>
-    </html>`,
-    {
-      headers: {
-        "Content-Type": "text/html",
-        "Cache-Control": "no-cache",
-      },
-    }
-  );
-  await cache.put("/offline.html", offlineResponse);
-};
+// No need to dynamically create an offline page as we have a static offline.html file
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -65,7 +30,6 @@ self.addEventListener("install", (event) => {
       caches.open(STATIC_CACHE_NAME).then((cache) => {
         return cache.addAll(urlsToCache);
       }),
-      createOfflinePage(),
     ])
   );
   self.skipWaiting(); // Activate the new service worker immediately
@@ -120,7 +84,9 @@ self.addEventListener("fetch", (event) => {
 
             // If it's a navigation request, return the offline page
             if (event.request.mode === "navigate") {
-              return caches.match("/offline.html");
+              return caches.match("/offline.html").then((response) => {
+                return response || caches.match("/");
+              });
             }
 
             return new Response("Offline - Data not available");
@@ -140,27 +106,35 @@ self.addEventListener("fetch", (event) => {
         return fetch(event.request)
           .then((response) => {
             // Check if we received a valid response
-            if (
-              !response ||
-              response.status !== 200 ||
-              response.type !== "basic"
-            ) {
+            if (!response || response.type !== "basic") {
               return response;
             }
 
-            // Clone the response because it's a stream and can only be consumed once
-            const responseToCache = response.clone();
+            // Handle 404 responses
+            if (response.status === 404 && event.request.mode === "navigate") {
+              return caches.match("/404.html");
+            }
 
-            caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+            // If it's a good response, cache it
+            if (response.status === 200) {
+              // Clone the response because it's a stream and can only be consumed once
+              const responseToCache = response.clone();
+
+              caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            }
+
+            return response;
 
             return response;
           })
           .catch(() => {
             // If it's a navigation request, return the offline page
             if (event.request.mode === "navigate") {
-              return caches.match("/offline.html");
+              return caches.match("/offline.html").then((response) => {
+                return response || caches.match("/");
+              });
             }
 
             // For image resources, return a fallback

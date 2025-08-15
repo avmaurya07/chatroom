@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatroom - Offline</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --bg-color: #f5f5f5;
+        --text-color: #333;
+        --card-bg: #ffffff;
+        --accent-color: #0070f3;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #121212;
+          --text-color: #e0e0e0;
+          --card-bg: #1e1e1e;
+          --accent-color: #3291ff;
+          --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+      }
+
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      .container {
+        max-width: 500px;
+        padding: 2.5em;
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      h1 {
+        margin-bottom: 0.5em;
+        font-size: 2rem;
+      }
+
+      p {
+        margin-bottom: 1.5em;
+        font-size: 1.1rem;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
+
+      .btn {
+        padding: 0.7em 1.5em;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: 500;
+        transition: transform 0.2s, background-color 0.2s;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        background-color: var(--accent-color);
+        opacity: 0.9;
+      }
+
+      .offline-icon {
+        font-size: 5em;
+        margin-bottom: 0.5em;
+      }
+
+      .info {
+        margin-top: 2em;
+        font-size: 0.9em;
+        opacity: 0.7;
+      }
+
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 1em;
+      }
+
+      @media (max-width: 600px) {
+        .container {
+          width: 90%;
+          padding: 1.5em;
+        }
+
+        h1 {
+          font-size: 1.7rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="/logo.svg" alt="Chatroom Logo" class="logo" />
+      <div class="offline-icon">📶</div>
+      <h1>You're Offline</h1>
+      <p>
+        Don't worry! You can still access your cached chat rooms and messages.
+      </p>
+      <button class="btn" onclick="window.location.href='/'">
+        Go to Cached Rooms
+      </button>
+      <p class="info">
+        Your messages will be sent automatically when you're back online.
+      </p>
+    </div>
+
+    <script>
+      // Check connection status and update UI accordingly
+      window.addEventListener("online", () => {
+        document.querySelector("h1").textContent = "You're Back Online!";
+        document.querySelector("p").textContent =
+          "Reconnecting to your chat rooms...";
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      });
+
+      // Check if we have any cached rooms
+      async function checkCachedContent() {
+        try {
+          const cache = await caches.open("chatroom-dynamic-v2");
+          const keys = await cache.keys();
+          const hasRooms = keys.some((request) =>
+            request.url.includes("/api/rooms")
+          );
+
+          if (!hasRooms) {
+            document.querySelector(".btn").textContent = "Retry Connection";
+            document.querySelector(".btn").onclick = () =>
+              window.location.reload();
+          }
+        } catch (error) {
+          console.error("Error checking cache:", error);
+        }
+      }
+
+      checkCachedContent();
+    </script>
+  </body>
+</html>
