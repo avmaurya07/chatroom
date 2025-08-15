@@ -1,11 +1,16 @@
 {
   "name": "BreakRoom",
   "short_name": "BreakRoom",
-  "description": "A real-time chatroom application",
+  "description": "Anonymous chat rooms with offline capabilities",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
+  "orientation": "any",
+  "categories": ["social", "chat", "communication"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/favicon.svg",

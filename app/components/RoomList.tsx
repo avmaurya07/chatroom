@@ -17,6 +17,7 @@ import CreateRoomDialog from "./CreateRoomDialog";
 import { generateRandomIdentity } from "@/app/lib/utils";
 import { useColorMode } from "@/app/contexts/ThemeContext";
 import Image from "next/image";
+import ConnectionStatus from "./ConnectionStatus";
 
 interface Room {
   _id: string;
@@ -46,9 +47,44 @@ export default function RoomList() {
 
   const fetchRooms = async () => {
     try {
-      const response = await fetch("/api/rooms");
-      const data = await response.json();
-      setRooms(data);
+      // Try to fetch from API first
+      let apiRooms: Room[] = [];
+      let fetchError = false;
+
+      try {
+        const response = await fetch("/api/rooms");
+        apiRooms = await response.json();
+
+        // If successful, cache rooms for offline use
+        if (Array.isArray(apiRooms) && apiRooms.length > 0) {
+          const { saveRoomToLocal } = await import("@/app/lib/offlineStorage");
+          for (const room of apiRooms) {
+            await saveRoomToLocal({ ...room, synced: true });
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to fetch rooms from API, using cached data:",
+          error
+        );
+        fetchError = true;
+      }
+
+      // If API fetch failed or returned empty, try to get cached rooms
+      if (fetchError || apiRooms.length === 0) {
+        const { getLocalRooms } = await import("@/app/lib/offlineStorage");
+        const localRooms = await getLocalRooms();
+
+        if (localRooms.length > 0) {
+          setRooms(localRooms);
+          return; // Use local rooms
+        }
+      }
+
+      // Use API rooms if available
+      if (apiRooms.length > 0) {
+        setRooms(apiRooms);
+      }
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
     }
@@ -129,6 +165,9 @@ export default function RoomList() {
         userId={userId}
         onRoomCreated={fetchRooms}
       />
+
+      {/* Connection status indicator */}
+      <ConnectionStatus />
     </Box>
   );
 }

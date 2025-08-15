@@ -20,6 +20,7 @@ import { useColorMode } from "@/app/contexts/ThemeContext";
 import moment from "moment";
 import { generateRandomIdentity } from "@/app/lib/utils";
 import { useRouter } from "next/navigation";
+import ConnectionStatus from "./ConnectionStatus";
 
 interface Message {
   _id: string;
@@ -28,6 +29,8 @@ interface Message {
   userEmoji: string;
   content: string;
   createdAt: string;
+  pending?: boolean;
+  synced?: boolean;
 }
 
 interface ChatRoomProps {
@@ -125,12 +128,107 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
   const fetchMessages = useCallback(async () => {
     try {
-      const response = await fetch(`/api/rooms/${roomId}/messages`);
-      const data = await response.json();
-      setMessages(data);
-      scrollToBottom();
+      // Try to fetch from API first
+      let apiMessages: Message[] = [];
+      let fetchError = false;
+
+      try {
+        const response = await fetch(`/api/rooms/${roomId}/messages`);
+        apiMessages = await response.json();
+
+        // If successful, cache messages for offline use
+        if (Array.isArray(apiMessages) && apiMessages.length > 0) {
+          const { saveMessageToLocal } = await import(
+            "@/app/lib/offlineStorage"
+          );
+          for (const msg of apiMessages) {
+            await saveMessageToLocal({ ...msg, roomId, synced: true });
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to fetch messages from API, using cached data:",
+          error
+        );
+        fetchError = true;
+      }
+
+      // If API fetch failed or returned empty, try to get cached messages
+      if (fetchError || apiMessages.length === 0) {
+        const { getLocalMessages } = await import("@/app/lib/offlineStorage");
+        const localMessages = await getLocalMessages(roomId);
+
+        if (localMessages.length > 0) {
+          setMessages(localMessages);
+          scrollToBottom();
+          return; // Use local messages
+        }
+      }
+
+      // Use API messages if available
+      if (apiMessages.length > 0) {
+        setMessages(apiMessages);
+        scrollToBottom();
+      }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
+    }
+  }, [roomId]);
+
+  const fetchRoomInfo = useCallback(async () => {
+    try {
+      setRoomLoading(true);
+      setRoomError(null);
+
+      // Try to fetch from API
+      let apiRoom = null;
+      let fetchError = false;
+
+      try {
+        const response = await fetch(`/api/rooms/${roomId}`);
+
+        if (response.ok) {
+          apiRoom = await response.json();
+
+          // Cache room info for offline use
+          const { saveRoomToLocal } = await import("@/app/lib/offlineStorage");
+          await saveRoomToLocal({ ...apiRoom, synced: true });
+        } else {
+          const errorData = await response.json();
+          fetchError = true;
+          console.error("Failed to fetch room info:", errorData);
+        }
+      } catch (error) {
+        fetchError = true;
+        console.warn(
+          "Failed to fetch room from API, using cached data:",
+          error
+        );
+      }
+
+      // If API fetch failed, try to get cached room info
+      if (fetchError || !apiRoom) {
+        const { getLocalRoom } = await import("@/app/lib/offlineStorage");
+        const localRoom = await getLocalRoom(roomId);
+
+        if (localRoom) {
+          // Add default activeUsersCount if missing
+          setRoomInfo({
+            ...localRoom,
+            activeUsersCount: localRoom.activeUsersCount || 0,
+          });
+        } else {
+          setRoomError("Room not found in cache. Check your connection.");
+        }
+      } else {
+        // Use API room if available
+        setRoomInfo(apiRoom);
+      }
+    } catch (error) {
+      setRoomError("An error occurred while fetching room data");
+      console.error("Failed to fetch room info:", error);
+    } finally {
+      setRoomLoading(false);
     }
   }, [roomId]);
 
@@ -139,34 +237,12 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     fetchMessages();
 
     // Fetch room information
-    const fetchRoomInfo = async () => {
-      try {
-        setRoomLoading(true);
-        setRoomError(null);
-        const response = await fetch(`/api/rooms/${roomId}`);
-
-        if (response.ok) {
-          const data = await response.json();
-          setRoomInfo(data);
-        } else {
-          const errorData = await response.json();
-          setRoomError(errorData.error || "Failed to load room information");
-          console.error("Failed to fetch room info:", errorData);
-        }
-      } catch (error) {
-        setRoomError("An error occurred while fetching room data");
-        console.error("Failed to fetch room info:", error);
-      } finally {
-        setRoomLoading(false);
-      }
-    };
-
     fetchRoomInfo();
-  }, [fetchMessages, roomId]);
+  }, [fetchMessages, fetchRoomInfo]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
+    if (!newMessage.trim()) return;
 
     const message = {
       roomId,
@@ -177,21 +253,84 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       createdAt: new Date().toISOString(),
     };
 
+    // Clear input immediately for better UX
+    setNewMessage("");
+
+    // Create a temporary message ID for local display
+    const tempMessage: Message = {
+      _id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: userInfo.id,
+      userName: userInfo.name,
+      userEmoji: userInfo.emoji,
+      content: newMessage.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add message to UI immediately
+    setMessages((prev) => [...prev, tempMessage]);
+    scrollToBottom();
+
     try {
-      // Clear input immediately for better UX
-      setNewMessage("");
+      // Check if we're online
+      if (navigator.onLine && socket) {
+        // We're online, send to API
+        const response = await fetch(`/api/rooms/${roomId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(message),
+        });
 
-      await fetch(`/api/rooms/${roomId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message),
-      });
+        if (response.ok) {
+          // Message sent successfully
+          const { saveMessageToLocal } = await import(
+            "@/app/lib/offlineStorage"
+          );
+          const sentMessage = await response.json();
 
-      socket.emit("send-message", message);
+          // Replace temp message with the real one from server
+          setMessages((prev) =>
+            prev.map((msg) => (msg._id === tempMessage._id ? sentMessage : msg))
+          );
+
+          // Cache the message
+          await saveMessageToLocal({ ...sentMessage, roomId, synced: true });
+
+          // Emit to socket for real-time updates
+          socket.emit("send-message", sentMessage);
+        }
+      } else {
+        // We're offline, queue the message for later
+        const { queueMessageForSync } = await import(
+          "@/app/lib/offlineStorage"
+        );
+        const { saveMessageToLocal } = await import("@/app/lib/offlineStorage");
+
+        // Queue message for sync
+        await queueMessageForSync(roomId, message);
+
+        // Save message locally with pending state
+        await saveMessageToLocal({
+          ...tempMessage,
+          roomId,
+          pending: true,
+          synced: false,
+        });
+
+        // Update UI to show pending state
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === tempMessage._id ? { ...msg, pending: true } : msg
+          )
+        );
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
+
+      // Queue the message for later delivery
+      const { queueMessageForSync } = await import("@/app/lib/offlineStorage");
+      await queueMessageForSync(roomId, message);
     }
   };
 
@@ -344,7 +483,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
               key={message._id}
               className={`mb-4 ${
                 message.userId === userInfo.id ? "text-right" : "text-left"
-              }`}
+              } ${message.pending ? "opacity-70" : ""}`}
             >
               <Box
                 className={`inline-block max-w-[70%] ${
@@ -378,6 +517,11 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                 </Typography>
                 <Typography variant="caption" className="block mt-1 opacity-75">
                   {moment(message.createdAt).fromNow()}
+                  {message.pending && (
+                    <span className="ml-2" title="Waiting to be sent">
+                      ⌛
+                    </span>
+                  )}
                 </Typography>
               </Box>
             </Box>
@@ -437,6 +581,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
           </form>
         </Box>
       </Paper>
+
+      {/* Connection status indicator */}
+      <ConnectionStatus />
     </Box>
   );
 }
