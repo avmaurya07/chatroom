@@ -18,14 +18,11 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Get the hostname from the window object if available (client-side)
-    const host =
-      typeof window !== "undefined" ? window.location.hostname : "localhost";
-
-    const socketInstance = io({
+    // Use environment variable for production, fallback to localhost for development
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000";
+    const socketInstance = io(socketUrl, {
       path: "/api/socket",
-      // Explicitly include the hostname and port when on localhost
-      ...(host === "localhost" && { host: "localhost", port: 3000 }),
     });
 
     socketInstance.on("connect", () => {
