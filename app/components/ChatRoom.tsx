@@ -507,7 +507,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                   {moment(message.createdAt).fromNow()}
                   {message.pending && (
                     <span className="ml-2" title="Waiting to be sent">
-                      ⌛
+                      ⏳
                     </span>
                   )}
                 </Typography>
