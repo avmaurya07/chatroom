@@ -9,7 +9,7 @@ interface RoomSkeletonProps {
 
 export default function RoomSkeleton({ count = 6 }: RoomSkeletonProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <>
       {Array.from(new Array(count)).map((_, index) => (
         <Paper
           key={index}
@@ -23,6 +23,6 @@ export default function RoomSkeleton({ count = 6 }: RoomSkeletonProps) {
           </Box>
         </Paper>
       ))}
-    </div>
+    </>
   );
 }

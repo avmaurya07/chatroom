@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Box, Paper, Typography, Button } from "@mui/material";
+import { Box, Paper, Typography, Button, Skeleton } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import { useRouter } from "next/navigation";
 import CreateRoomDialog from "./CreateRoomDialog";
@@ -9,8 +9,6 @@ import { generateRandomIdentity } from "@/app/lib/utils";
 import { useColorMode } from "@/app/contexts/ThemeContext";
 import Image from "next/image";
 import ConnectionStatus from "./ConnectionStatus";
-import Loader from "./Loader";
-import RoomSkeleton from "./RoomSkeleton";
 
 interface Room {
   _id: string;
@@ -126,9 +124,46 @@ export default function RoomList() {
         </div>
       </Box>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-stagger-fade-in">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <RoomSkeleton count={6} />
+          <>
+            {Array.from(new Array(6)).map((_, index) => (
+              <Paper
+                key={`skeleton-${index}`}
+                className="p-6 border border-gray-100 hover:shadow-lg smooth-transition"
+                elevation={2}
+                sx={{
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Skeleton
+                  variant="text"
+                  width="70%"
+                  height={32}
+                  className="mb-3"
+                  animation="wave"
+                />
+                <Box className="flex items-center justify-between mt-auto">
+                  <Skeleton
+                    variant="rounded"
+                    width={80}
+                    height={24}
+                    sx={{ borderRadius: "9999px" }}
+                    className="py-1 px-2"
+                    animation="wave"
+                  />
+                  <Skeleton
+                    variant="text"
+                    width={120}
+                    height={20}
+                    animation="wave"
+                  />
+                </Box>
+              </Paper>
+            ))}
+          </>
         ) : rooms.length > 0 ? (
           rooms.map((room) => (
             <Paper
@@ -138,11 +173,12 @@ export default function RoomList() {
               }`}
               onClick={() => handleRoomClick(room._id)}
               elevation={2}
+              sx={{ height: "100%", display: "flex", flexDirection: "column" }}
             >
               <Typography variant="h6" className="mb-3 font-semibold truncate">
                 {room.name}
               </Typography>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-auto">
                 <Typography
                   variant="body2"
                   className="py-1 px-2 rounded-full bg-emerald-100 text-emerald-800"
