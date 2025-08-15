@@ -8,12 +8,12 @@ import {
   DialogActions,
   TextField,
   Button,
-  Grid,
   Box,
   Typography,
   IconButton,
   Avatar,
 } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import { emojis } from "@/app/lib/utils";
 
 interface UserProfileEditorProps {
@@ -52,7 +52,7 @@ export default function UserProfileEditor({
       <DialogTitle>Edit Your Profile</DialogTitle>
       <DialogContent>
         <Grid container spacing={2}>
-          <Grid item xs={12} sx={{ mt: 2 } as any}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
             <TextField
               autoFocus
               label="Your Name"
@@ -68,19 +68,17 @@ export default function UserProfileEditor({
               Choose your emoji
             </Typography>
             <Box
-              sx={
-                {
-                  display: "grid",
-                  gridTemplateColumns: "repeat(5, 1fr)",
-                  gap: 1,
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                  p: 1,
-                } as any
-              }
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gap: 1,
+                maxHeight: "200px",
+                overflowY: "auto",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                p: 1,
+              }}
             >
               {emojis.map((e, index) => (
                 <IconButton
@@ -99,7 +97,7 @@ export default function UserProfileEditor({
               ))}
             </Box>
           </Grid>
-          <Grid item xs={12} sx={{ mt: 2 } as any}>
+          <Grid item xs={12} sx={{ mt: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <Typography variant="subtitle1">Preview:</Typography>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
