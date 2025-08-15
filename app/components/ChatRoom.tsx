@@ -8,7 +8,6 @@ import {
   IconButton,
   Typography,
   Avatar,
-  Button,
   Tooltip,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";

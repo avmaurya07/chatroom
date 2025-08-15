@@ -13,7 +13,6 @@ import {
   IconButton,
   Avatar,
 } from "@mui/material";
-import Grid from "@mui/material/Grid";
 import { emojis } from "@/app/lib/utils";
 
 interface UserProfileEditorProps {
@@ -34,7 +33,6 @@ export default function UserProfileEditor({
   const [name, setName] = useState(currentName);
   const [emoji, setEmoji] = useState(currentEmoji);
 
-  // Sync state with props when dialog opens
   useEffect(() => {
     if (open) {
       setName(currentName);
@@ -51,19 +49,20 @@ export default function UserProfileEditor({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Your Profile</DialogTitle>
       <DialogContent>
-        <Grid container spacing={2}>
-          <Grid item xs={12} sx={{ mt: 2 }}>
-            <TextField
-              autoFocus
-              label="Your Name"
-              fullWidth
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              inputProps={{ maxLength: 30 }}
-              helperText={`${name.length}/30 characters`}
-            />
-          </Grid>
-          <Grid item xs={12}>
+        <Box display="flex" flexDirection="column" gap={2} mt={2}>
+          {/* Name Field */}
+          <TextField
+            autoFocus
+            label="Your Name"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            inputProps={{ maxLength: 30 }}
+            helperText={`${name.length}/30 characters`}
+          />
+
+          {/* Emoji Picker */}
+          <Box>
             <Typography variant="subtitle1" gutterBottom>
               Choose your emoji
             </Typography>
@@ -96,18 +95,19 @@ export default function UserProfileEditor({
                 </IconButton>
               ))}
             </Box>
-          </Grid>
-          <Grid item xs={12} sx={{ mt: 2 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography variant="subtitle1">Preview:</Typography>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Avatar sx={{ bgcolor: "primary.main" }}>{emoji}</Avatar>
-                <Typography>{name}</Typography>
-              </Box>
+          </Box>
+
+          {/* Preview */}
+          <Box display="flex" alignItems="center" gap={2} mt={2}>
+            <Typography variant="subtitle1">Preview:</Typography>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Avatar sx={{ bgcolor: "primary.main" }}>{emoji}</Avatar>
+              <Typography>{name}</Typography>
             </Box>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </DialogContent>
+
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleSave} variant="contained" color="primary">
