@@ -8,7 +8,9 @@ import {
   DialogActions,
   TextField,
   Button,
+  Alert,
 } from "@mui/material";
+import Captcha from "./Captcha";
 
 interface CreateRoomDialogProps {
   open: boolean;
@@ -25,11 +27,20 @@ export default function CreateRoomDialog({
 }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [captchaToken, setCaptchaToken] = useState<string>("");
   const maxRoomNameLength = 20;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
+
+    if (!captchaToken) {
+      setError("Please complete the CAPTCHA verification");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/rooms", {
@@ -40,6 +51,7 @@ export default function CreateRoomDialog({
         body: JSON.stringify({
           name: name.trim().substring(0, maxRoomNameLength),
           creatorId: userId,
+          captchaToken,
         }),
       });
 
@@ -48,6 +60,7 @@ export default function CreateRoomDialog({
         handleClose();
       } else {
         const data = await response.json();
+        setError(data.error || "Failed to create room");
         alert(data.error || "Failed to create room");
       }
     } catch (error) {
@@ -60,6 +73,8 @@ export default function CreateRoomDialog({
 
   const handleClose = () => {
     setName("");
+    setCaptchaToken("");
+    setError("");
     onClose();
   };
 
@@ -96,6 +111,12 @@ export default function CreateRoomDialog({
             helperText={`Choose a descriptive name for your room (${name.length}/${maxRoomNameLength} characters)`}
             inputProps={{ maxLength: maxRoomNameLength }}
           />
+          {error && (
+            <Alert severity="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
+          <Captcha onVerify={setCaptchaToken} />
         </DialogContent>
         <DialogActions className="bg-gray-50 border-t border-gray-100 p-3">
           <Button

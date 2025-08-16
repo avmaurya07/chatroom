@@ -1,11 +1,47 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import connectDB from "@/app/lib/mongodb";
 import { Room } from "@/app/lib/models/Room";
+import { checkRateLimit } from "@/app/lib/rateLimit";
+import { verifyCaptcha } from "@/app/lib/captcha";
 
 export async function POST(request: Request) {
   try {
     await connectDB();
-    const { name, creatorId } = await request.json();
+    const { name, creatorId, captchaToken } = await request.json();
+    console.log("Received request:", {
+      name,
+      creatorId,
+      captchaTokenLength: captchaToken?.length,
+    });
+
+    const headersList = headers();
+    const ip = headersList.get("x-forwarded-for") || "unknown";
+    console.log("Client IP:", ip);
+
+    // Verify CAPTCHA
+    console.log("Verifying CAPTCHA token...");
+    const isCaptchaValid = await verifyCaptcha(captchaToken);
+    console.log("CAPTCHA validation result:", isCaptchaValid);
+
+    if (!isCaptchaValid) {
+      return NextResponse.json(
+        { error: "Invalid CAPTCHA. Please try again." },
+        { status: 400 }
+      );
+    }
+
+    // Rate limit: 5 room creations per hour per user
+    const rateLimitResponse = await checkRateLimit(
+      `create-room:${creatorId}`,
+      60 * 60 * 1000, // 1 hour window
+      5, // max 5 rooms per hour
+      ip // Include IP for rate limiting
+    );
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     // Validate room name
     if (!name || typeof name !== "string" || name.trim().length === 0) {
