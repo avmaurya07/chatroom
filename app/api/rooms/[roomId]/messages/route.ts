@@ -33,7 +33,7 @@ export async function POST(
     await connectDB();
     const messageData = await request.json();
     const { roomId } = await params;
-    const headersList = headers();
+    const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "unknown";
 
     // Rate limit: 30 messages per minute per user per room

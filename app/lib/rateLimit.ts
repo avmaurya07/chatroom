@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import redis from "./redis";
 
 interface RateLimitInfo {
