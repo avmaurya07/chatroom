@@ -1,10 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Box, Paper, Typography, Button, Skeleton } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Skeleton,
+  Tabs,
+  Tab,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import LockIcon from "@mui/icons-material/Lock";
 import PublicIcon from "@mui/icons-material/Public";
+import PersonIcon from "@mui/icons-material/Person";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { IconButton, Snackbar, Alert } from "@mui/material";
 import { useRouter } from "next/navigation";
@@ -28,6 +37,7 @@ export default function RoomList() {
   const [loading, setLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
   const [shareSnackbar, setShareSnackbar] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
   const router = useRouter();
   const { mode } = useColorMode();
   const [userInfo] = useState(() => {
@@ -117,6 +127,23 @@ export default function RoomList() {
       });
   };
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const getFilteredRooms = () => {
+    switch (tabValue) {
+      case 0: // Public
+        return rooms.filter((room) => !room.isPrivate);
+      case 1: // Private
+        return rooms.filter((room) => room.isPrivate);
+      case 2: // Personal
+        return []; // Empty for now, will show "coming soon"
+      default:
+        return rooms;
+    }
+  };
+
   return (
     <Box
       className={`p-6 mx-auto w-full ${
@@ -152,6 +179,19 @@ export default function RoomList() {
             Create Room
           </Button>
         </div>
+      </Box>
+
+      {/* Tabs for filtering rooms */}
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="room types"
+        >
+          <Tab icon={<PublicIcon />} label="Public" iconPosition="start" />
+          <Tab icon={<LockIcon />} label="Private" iconPosition="start" />
+          <Tab icon={<PersonIcon />} label="Personal" iconPosition="start" />
+        </Tabs>
       </Box>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -194,8 +234,20 @@ export default function RoomList() {
               </Paper>
             ))}
           </>
-        ) : rooms.length > 0 ? (
-          rooms.map((room) => (
+        ) : tabValue === 2 ? (
+          // Personal tab - Coming Soon message
+          <div className="col-span-3 text-center py-20">
+            <PersonIcon sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
+            <Typography variant="h5" color="textSecondary" className="mb-2">
+              Personal Chats
+            </Typography>
+            <Typography variant="body1" color="textSecondary">
+              Coming very soon! Personal chats will allow you to have private
+              conversations.
+            </Typography>
+          </div>
+        ) : getFilteredRooms().length > 0 ? (
+          getFilteredRooms().map((room) => (
             <Paper
               key={room._id}
               className={`p-6 cursor-pointer hover:shadow-lg smooth-transition hover:translate-y-[-4px] border border-gray-100 relative ${
@@ -254,7 +306,9 @@ export default function RoomList() {
         ) : (
           <div className="col-span-3 text-center py-10">
             <Typography variant="h6" color="textSecondary">
-              No rooms available. Create a new room to get started!
+              {tabValue === 0
+                ? "No public rooms available. Create a new public room to get started!"
+                : "No private rooms available. Create a new private room to get started!"}
             </Typography>
           </div>
         )}
