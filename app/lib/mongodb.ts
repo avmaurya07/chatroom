@@ -21,7 +21,6 @@ const connectionOptions = {
   family: 4, // Use IPv4, skip trying IPv6
   // Buffering settings
   bufferCommands: false, // Disable mongoose buffering
-  bufferMaxEntries: 0, // Disable mongoose buffering
   // Heartbeat frequency for faster detection of connection issues
   heartbeatFrequencyMS: 10000,
   // Connection timeout
