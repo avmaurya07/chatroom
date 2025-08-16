@@ -318,26 +318,83 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
         // Setup SSE connection
         const eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
+        console.log("Connecting to SSE stream:", `/api/rooms/${roomId}/stream`);
 
+        // Track messages we've already seen
+        const seenMessageIds = new Set();
+
+        // Add all current messages to seen set
+        setMessages((currentMessages) => {
+          currentMessages.forEach((msg) => seenMessageIds.add(msg._id));
+          return currentMessages;
+        });
+
+        // Handle connection events
+        eventSource.addEventListener("connection", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("SSE connection established:", data);
+          } catch (error) {
+            console.error("Error parsing connection event:", error);
+          }
+        });
+
+        // Handle ping events to keep connection alive
+        eventSource.addEventListener("ping", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("SSE ping received:", data.timestamp);
+          } catch (error) {
+            console.error("Error parsing ping event:", error);
+          }
+        });
+
+        // Handle regular message events
         eventSource.onmessage = (event) => {
-          const newMessage = JSON.parse(event.data);
-          setMessages((prevMessages) => {
-            // Check if message already exists (avoid duplicates)
-            if (prevMessages.some((msg) => msg._id === newMessage._id)) {
-              return prevMessages;
+          try {
+            console.log("SSE message received:", event.data.substring(0, 100));
+            const data = JSON.parse(event.data);
+
+            // Handle connection status messages
+            if (data.type === "connection" || data.type === "ping") {
+              return;
             }
-            return [...prevMessages, newMessage];
-          });
-          scrollToBottom();
+
+            // Handle actual messages
+            // Avoid adding duplicate messages
+            if (data._id && !seenMessageIds.has(data._id)) {
+              seenMessageIds.add(data._id);
+
+              setMessages((prevMessages) => {
+                // Also check in current state to be extra safe
+                if (prevMessages.some((msg) => msg._id === data._id)) {
+                  return prevMessages;
+                }
+                console.log("New message from SSE:", data);
+                const newMessages = [...prevMessages, data];
+                return newMessages;
+              });
+
+              // Scroll to the bottom for new messages
+              setTimeout(scrollToBottom, 100);
+            }
+          } catch (error) {
+            console.error("Error processing SSE message:", error);
+          }
         };
 
         eventSource.onerror = (error) => {
           console.error("SSE Error:", error);
-          eventSource.close();
+          // Try to reconnect after a delay instead of just closing
+          setTimeout(() => {
+            eventSource.close();
+            initializeRoom();
+          }, 5000);
         };
 
         // Cleanup SSE connection when component unmounts
         return () => {
+          console.log("Closing SSE connection");
           eventSource.close();
         };
       } catch (error) {

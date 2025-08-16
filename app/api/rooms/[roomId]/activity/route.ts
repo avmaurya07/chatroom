@@ -48,7 +48,35 @@ export async function POST(
 ) {
   try {
     const { roomId } = await context.params;
-    const { userId, userName, userEmoji } = await request.json();
+
+    // Add error handling for JSON parsing
+    let userId, userName, userEmoji;
+    try {
+      const body = await request.text();
+      if (!body || body.trim() === "") {
+        return NextResponse.json(
+          { error: "Empty request body" },
+          { status: 400 }
+        );
+      }
+      const data = JSON.parse(body);
+      userId = data.userId;
+      userName = data.userName;
+      userEmoji = data.userEmoji;
+
+      if (!userId || !userName) {
+        return NextResponse.json(
+          { error: "Missing required fields" },
+          { status: 400 }
+        );
+      }
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError);
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
 
     await connectDB();
     const room = await Room.findById(roomId);

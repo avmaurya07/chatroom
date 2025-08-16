@@ -1,0 +1,88 @@
+import { NextRequest, NextResponse } from "next/server";
+import redis from "@/app/lib/redis";
+
+export const dynamic = "force-dynamic";
+// ✅ Run on Node.js runtime (not Edge)
+export const runtime = "nodejs";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { roomId: string } }
+) {
+  try {
+    const { roomId } = params;
+    const streamKey = `room:${roomId}:stream`;
+
+    console.log("Initializing SSE stream for room:", roomId);
+
+    // SSE headers
+    const encoder = new TextEncoder();
+    const headers = {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    };
+
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+
+    // Function to push events
+    const writeEvent = async (data: string) => {
+      try {
+        await writer.write(encoder.encode(`data: ${data}\n\n`));
+      } catch (err) {
+        console.error("Failed to write SSE event:", err);
+      }
+    };
+
+    // Initial connection event
+    await writeEvent(JSON.stringify({ type: "connection", status: "connected" }));
+    
+    // Set up polling for new messages
+    let lastMessageTime = Date.now();
+    const pollInterval = 1000; // Poll every second
+    
+    const poll = async () => {
+      try {
+        // Use Upstash Redis REST to get the latest messages
+        // We'll use a list to store the last few messages with their timestamps
+        const recentMessages = await redis.lrange(`${streamKey}:recent`, 0, 9);
+        
+        for (const messageStr of recentMessages) {
+          try {
+            const messageEntry = JSON.parse(messageStr);
+            // Only process messages newer than our last check
+            if (messageEntry.timestamp > lastMessageTime) {
+              console.log("New message from Redis polling:", messageEntry);
+              await writeEvent(JSON.stringify(messageEntry.message));
+              lastMessageTime = messageEntry.timestamp;
+            }
+          } catch (parseError) {
+            console.error("Error parsing message:", parseError, messageStr);
+            // Skip this message but continue processing others
+          }
+        }
+      } catch (err) {
+        console.error("Error polling for messages:", err);
+      }
+    };
+    
+    // Start polling
+    const intervalId = setInterval(poll, pollInterval);
+    
+    // Execute initial poll
+    await poll();
+
+    // Handle disconnect
+    request.signal.addEventListener("abort", async () => {
+      console.log("Client disconnected:", roomId);
+      clearInterval(intervalId);
+      await writer.close();
+    });
+
+    return new Response(stream.readable, { headers });
+  } catch (error) {
+    console.error("SSE stream error:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}

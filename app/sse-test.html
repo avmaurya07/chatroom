@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SSE Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.5;
+      }
+      #events {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 400px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        background-color: #f5f5f5;
+      }
+      .event {
+        margin-bottom: 5px;
+        padding: 5px;
+        border-bottom: 1px solid #eee;
+      }
+      .connection {
+        color: green;
+      }
+      .ping {
+        color: blue;
+      }
+      .message {
+        color: black;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SSE Test Page</h1>
+    <p>
+      This page tests the Server-Sent Events endpoint at
+      <span id="endpoint"></span>
+    </p>
+    <p>
+      Room ID:
+      <input
+        type="text"
+        id="roomId"
+        value="68a043ef8d447fd61d8a22d9"
+        style="width: 300px"
+      />
+      <button onclick="connect()">Connect</button>
+      <button onclick="disconnect()">Disconnect</button>
+    </p>
+    <div id="status">Disconnected</div>
+    <div id="events"></div>
+
+    <script>
+      let eventSource = null;
+      const eventsDiv = document.getElementById("events");
+      const endpointSpan = document.getElementById("endpoint");
+      const statusDiv = document.getElementById("status");
+
+      function appendEvent(text, className) {
+        const eventDiv = document.createElement("div");
+        eventDiv.className = `event ${className}`;
+        eventDiv.textContent = text;
+        eventsDiv.appendChild(eventDiv);
+        eventsDiv.scrollTop = eventsDiv.scrollHeight;
+      }
+
+      function connect() {
+        if (eventSource) {
+          disconnect();
+        }
+
+        const roomId = document.getElementById("roomId").value;
+        const endpoint = `/api/rooms/${roomId}/stream`;
+        endpointSpan.textContent = endpoint;
+
+        statusDiv.textContent = "Connecting...";
+        appendEvent("Connecting to " + endpoint, "connection");
+
+        eventSource = new EventSource(endpoint);
+
+        eventSource.addEventListener("open", () => {
+          statusDiv.textContent = "Connected";
+          appendEvent("Connection opened", "connection");
+        });
+
+        eventSource.addEventListener("connection", (event) => {
+          appendEvent("Connection event: " + event.data, "connection");
+        });
+
+        eventSource.addEventListener("ping", (event) => {
+          appendEvent("Ping: " + event.data, "ping");
+        });
+
+        eventSource.onmessage = (event) => {
+          appendEvent("Message: " + event.data, "message");
+        };
+
+        eventSource.onerror = (error) => {
+          appendEvent("Error: " + JSON.stringify(error), "error");
+          statusDiv.textContent = "Error";
+        };
+      }
+
+      function disconnect() {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+          statusDiv.textContent = "Disconnected";
+          appendEvent("Connection closed", "connection");
+        }
+      }
+
+      // Set the initial room ID from the URL if present
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("roomId")) {
+        document.getElementById("roomId").value = urlParams.get("roomId");
+      }
+    </script>
+  </body>
+</html>

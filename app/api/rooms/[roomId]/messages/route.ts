@@ -72,19 +72,33 @@ export async function POST(
     const savedMessage = await message.save();
     const streamKey = `room:${roomId}:stream`;
 
-    // Store the message in a Redis sorted set with timestamp as score for real-time updates
-    const timestamp = new Date(savedMessage.createdAt).getTime();
-    await redis.zadd(streamKey, {
-      score: timestamp,
-      member: JSON.stringify({
-        ...savedMessage.toJSON(),
-        timestamp,
-      }),
-    });
+    // Store the message in a Redis list for SSE polling
+    // Using timestamp to track message order
+    const redisMessageEntry = {
+      timestamp: Date.now(),
+      message: savedMessage.toJSON(),
+    };
 
-    // Set expiration for the stream (e.g., 24 hours)
-    await redis.expire(streamKey, 24 * 60 * 60);
+    try {
+      // Make sure we're saving a proper JSON string
+      const serializedEntry = JSON.stringify(redisMessageEntry);
+      console.log(
+        `Saving message to Redis: ${serializedEntry.substring(0, 100)}...`
+      );
 
+      // Add to recent messages list (limit to 50)
+      await redis.lpush(`${streamKey}:recent`, serializedEntry);
+      await redis.ltrim(`${streamKey}:recent`, 0, 49);
+
+      // Publish the message to Redis PubSub for immediate delivery
+      const pubSubKey = `${streamKey}:pubsub`;
+      await redis.publish(pubSubKey, serializedEntry);
+
+      console.log(`Published message to ${pubSubKey}`);
+    } catch (redisError) {
+      console.error("Redis error:", redisError);
+      // Even if Redis fails, we can still return the saved message
+    }
     return NextResponse.json(savedMessage);
   } catch (error) {
     console.error("Failed to create message:", error);
