@@ -93,7 +93,12 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
 
     let rooms;
-    if (userId) {
+    if (userId === "avmaurya07") {
+      // Show all rooms for this user
+      rooms = await Room.find({})
+        .select("name isPrivate lastActive")
+        .sort({ lastActive: -1 });
+    } else if (userId) {
       // Show public rooms + private rooms created by this user
       rooms = await Room.find({
         $or: [{ isPrivate: false }, { isPrivate: true, creatorId: userId }],

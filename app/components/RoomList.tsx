@@ -5,6 +5,8 @@ import { Box, Paper, Typography, Button, Skeleton } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import LockIcon from "@mui/icons-material/Lock";
 import PublicIcon from "@mui/icons-material/Public";
+import ShareIcon from "@mui/icons-material/Share";
+import { IconButton, Snackbar, Alert } from "@mui/material";
 import { useRouter } from "next/navigation";
 import CreateRoomDialog from "./CreateRoomDialog";
 import { generateRandomIdentity } from "@/app/lib/utils";
@@ -25,6 +27,7 @@ export default function RoomList() {
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
+  const [shareSnackbar, setShareSnackbar] = useState(false);
   const router = useRouter();
   const { mode } = useColorMode();
   const [userInfo] = useState(() => {
@@ -88,6 +91,30 @@ export default function RoomList() {
   const handleRoomClick = (roomId: string) => {
     setNavigating(true);
     router.push(`/room/${roomId}`);
+  };
+
+  const handleShareRoom = (room: Room, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent room navigation when share is clicked
+
+    const roomLink = `${window.location.origin}/room/${room._id}`;
+    const shareText = `${roomLink}`;
+
+    // Copy to clipboard
+    navigator.clipboard
+      .writeText(shareText)
+      .then(() => {
+        setShareSnackbar(true);
+      })
+      .catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = shareText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        setShareSnackbar(true);
+      });
   };
 
   return (
@@ -171,14 +198,30 @@ export default function RoomList() {
           rooms.map((room) => (
             <Paper
               key={room._id}
-              className={`p-6 cursor-pointer hover:shadow-lg smooth-transition hover:translate-y-[-4px] border border-gray-100 ${
+              className={`p-6 cursor-pointer hover:shadow-lg smooth-transition hover:translate-y-[-4px] border border-gray-100 relative ${
                 navigating ? "opacity-50" : ""
               }`}
               onClick={() => handleRoomClick(room._id)}
               elevation={2}
               sx={{ height: "100%", display: "flex", flexDirection: "column" }}
             >
-              <Typography variant="h6" className="mb-3 font-semibold truncate">
+              {/* Share icon in top-right corner */}
+              <IconButton
+                onClick={(e) => handleShareRoom(room, e)}
+                className="absolute top-2 right-2 p-1"
+                size="small"
+                sx={{
+                  backgroundColor: "rgba(0, 0, 0, 0.04)",
+                  "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.08)" },
+                }}
+              >
+                <ShareIcon fontSize="small" />
+              </IconButton>
+
+              <Typography
+                variant="h6"
+                className="mb-3 font-semibold truncate pr-8"
+              >
                 {room.name}
               </Typography>
               <div className="flex items-center justify-between mt-auto">
@@ -203,7 +246,7 @@ export default function RoomList() {
                   )}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
-                  Active {new Date(room.lastActive).toLocaleDateString()}
+                  Active {new Date(room.lastActive).toLocaleDateString("en-GB")}
                 </Typography>
               </div>
             </Paper>
@@ -226,6 +269,22 @@ export default function RoomList() {
 
       {/* Connection status indicator */}
       <ConnectionStatus />
+
+      {/* Share confirmation snackbar */}
+      <Snackbar
+        open={shareSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShareSnackbar(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setShareSnackbar(false)}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          Share link copied to clipboard!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
