@@ -5,7 +5,7 @@ import { Box, Paper, Typography, Button, Skeleton } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import LockIcon from "@mui/icons-material/Lock";
 import PublicIcon from "@mui/icons-material/Public";
-import ShareIcon from "@mui/icons-material/Share";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { IconButton, Snackbar, Alert } from "@mui/material";
 import { useRouter } from "next/navigation";
 import CreateRoomDialog from "./CreateRoomDialog";
@@ -205,7 +205,7 @@ export default function RoomList() {
               elevation={2}
               sx={{ height: "100%", display: "flex", flexDirection: "column" }}
             >
-              {/* Share icon in top-right corner */}
+              {/* Copy icon in top-right corner */}
               <IconButton
                 onClick={(e) => handleShareRoom(room, e)}
                 className="absolute top-2 right-2 p-1"
@@ -215,7 +215,7 @@ export default function RoomList() {
                   "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.08)" },
                 }}
               >
-                <ShareIcon fontSize="small" />
+                <ContentCopyIcon fontSize="small" />
               </IconButton>
 
               <Typography
