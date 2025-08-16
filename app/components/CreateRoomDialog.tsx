@@ -9,7 +9,13 @@ import {
   TextField,
   Button,
   Alert,
+  FormControlLabel,
+  Switch,
+  Box,
+  Typography,
 } from "@mui/material";
+import LockIcon from "@mui/icons-material/Lock";
+import PublicIcon from "@mui/icons-material/Public";
 import Captcha from "./Captcha";
 
 interface CreateRoomDialogProps {
@@ -26,6 +32,7 @@ export default function CreateRoomDialog({
   onRoomCreated,
 }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [captchaToken, setCaptchaToken] = useState<string>("");
@@ -51,6 +58,7 @@ export default function CreateRoomDialog({
         body: JSON.stringify({
           name: name.trim().substring(0, maxRoomNameLength),
           creatorId: userId,
+          isPrivate,
           captchaToken,
         }),
       });
@@ -73,6 +81,7 @@ export default function CreateRoomDialog({
 
   const handleClose = () => {
     setName("");
+    setIsPrivate(false);
     setCaptchaToken("");
     setError("");
     onClose();
@@ -111,6 +120,39 @@ export default function CreateRoomDialog({
             helperText={`Choose a descriptive name for your room (${name.length}/${maxRoomNameLength} characters)`}
             inputProps={{ maxLength: maxRoomNameLength }}
           />
+
+          <Box className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <Typography variant="h6" className="mb-3 text-gray-800 font-medium">
+              Room Privacy
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label={
+                <Box className="flex items-center gap-2">
+                  {isPrivate ? (
+                    <LockIcon className="text-orange-600" fontSize="small" />
+                  ) : (
+                    <PublicIcon className="text-green-600" fontSize="small" />
+                  )}
+                  <span className="font-medium">
+                    {isPrivate ? "Private Room" : "Public Room"}
+                  </span>
+                </Box>
+              }
+            />
+            <Typography variant="body2" className="mt-2 text-gray-600">
+              {isPrivate
+                ? "🔒 Only you can see this room in the room list. Others can join with an invite link."
+                : "🌐 Everyone can see and join this room from the room list."}
+            </Typography>
+          </Box>
+
           {error && (
             <Alert severity="error" className="mb-4">
               {error}

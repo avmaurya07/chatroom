@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Box, Paper, Typography, Button, Skeleton } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import LockIcon from "@mui/icons-material/Lock";
+import PublicIcon from "@mui/icons-material/Public";
 import { useRouter } from "next/navigation";
 import CreateRoomDialog from "./CreateRoomDialog";
 import { generateRandomIdentity } from "@/app/lib/utils";
@@ -13,6 +15,8 @@ import ConnectionStatus from "./ConnectionStatus";
 interface Room {
   _id: string;
   name: string;
+  isPrivate: boolean;
+  creatorId?: string;
   lastActive: string;
 }
 
@@ -34,20 +38,17 @@ export default function RoomList() {
     return "";
   });
 
-  useEffect(() => {
-    // Fetch rooms once when component mounts
-    fetchRooms();
-  }, []);
-
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     setLoading(true);
     try {
       // Try to fetch from API first
       let apiRooms: Room[] = [];
-      let fetchError = false;
+      // let fetchError = false;
 
       try {
-        const response = await fetch("/api/rooms");
+        const response = await fetch(
+          `/api/rooms?userId=${encodeURIComponent(userId)}`
+        );
         apiRooms = await response.json();
 
         // If successful, cache rooms for offline use
@@ -62,18 +63,7 @@ export default function RoomList() {
           "Failed to fetch rooms from API, using cached data:",
           error
         );
-        fetchError = true;
-      }
-
-      // If API fetch failed or returned empty, try to get cached rooms
-      if (fetchError || apiRooms.length === 0) {
-        const { getLocalRooms } = await import("@/app/lib/offlineStorage");
-        const localRooms = await getLocalRooms();
-
-        if (localRooms.length > 0) {
-          setRooms(localRooms);
-          return; // Use local rooms
-        }
+        // fetchError = true;
       }
 
       // Use API rooms if available
@@ -85,7 +75,12 @@ export default function RoomList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]); // Add userId as dependency for useCallback
+
+  useEffect(() => {
+    // Fetch rooms once when component mounts
+    fetchRooms();
+  }, [fetchRooms]); // Add fetchRooms as dependency
 
   const handleRoomClick = (roomId: string) => {
     setNavigating(true);
@@ -186,9 +181,23 @@ export default function RoomList() {
               <div className="flex items-center justify-between mt-auto">
                 <Typography
                   variant="body2"
-                  className="py-1 px-2 rounded-full bg-emerald-100 text-emerald-800"
+                  className={`py-1 px-2 rounded-full flex items-center gap-1 ${
+                    room.isPrivate
+                      ? "bg-orange-100 text-orange-800"
+                      : "bg-emerald-100 text-emerald-800"
+                  }`}
                 >
-                  🌐 Public
+                  {room.isPrivate ? (
+                    <>
+                      <LockIcon fontSize="small" />
+                      Private
+                    </>
+                  ) : (
+                    <>
+                      <PublicIcon fontSize="small" />
+                      Public
+                    </>
+                  )}
                 </Typography>
                 <Typography variant="caption" color="textSecondary">
                   Active {new Date(room.lastActive).toLocaleDateString()}

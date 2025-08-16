@@ -8,10 +8,16 @@ import { verifyCaptcha } from "@/app/lib/captcha";
 export async function POST(request: Request) {
   try {
     await connectDB();
-    const { name, creatorId, captchaToken } = await request.json();
+    const {
+      name,
+      creatorId,
+      isPrivate = false,
+      captchaToken,
+    } = await request.json();
     console.log("Received request:", {
       name,
       creatorId,
+      isPrivate,
       captchaTokenLength: captchaToken?.length,
     });
 
@@ -63,7 +69,7 @@ export async function POST(request: Request) {
     const room = new Room({
       name: name.trim().substring(0, 20),
       creatorId,
-      isPrivate: false,
+      isPrivate,
       inviteLinks: [],
     });
 
@@ -78,12 +84,29 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await connectDB();
-    const rooms = await Room.find()
-      .select("name isPrivate lastActive")
-      .sort({ lastActive: -1 });
+
+    // Get userId from query parameters to filter private rooms
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId");
+
+    let rooms;
+    if (userId) {
+      // Show public rooms + private rooms created by this user
+      rooms = await Room.find({
+        $or: [{ isPrivate: false }, { isPrivate: true, creatorId: userId }],
+      })
+        .select("name isPrivate creatorId lastActive")
+        .sort({ lastActive: -1 });
+    } else {
+      // Only show public rooms if no userId provided
+      rooms = await Room.find({ isPrivate: false })
+        .select("name isPrivate lastActive")
+        .sort({ lastActive: -1 });
+    }
+
     return NextResponse.json(rooms);
   } catch (error) {
     console.error("Failed to fetch rooms:", error);
