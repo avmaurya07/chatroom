@@ -26,7 +26,7 @@ export async function GET(
   }
 }
 
-import { verifyUserData, isReservedUsername } from "@/app/lib/auth";
+import { isReservedUsername } from "@/app/lib/auth";
 
 export async function POST(
   request: Request,
@@ -38,14 +38,6 @@ export async function POST(
     const { roomId } = await params;
     const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "unknown";
-
-    // Verify user data and signature
-    if (!verifyUserData(messageData)) {
-      return NextResponse.json(
-        { error: "Invalid user signature" },
-        { status: 403 }
-      );
-    }
 
     // Check for reserved usernames
     if (isReservedUsername(messageData.userName)) {
@@ -72,7 +64,6 @@ export async function POST(
       lastActive: new Date(),
     });
 
-    // Store signature for potential future verification
     const message = new Message({
       ...messageData,
       roomId,

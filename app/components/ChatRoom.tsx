@@ -57,16 +57,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       const stored = localStorage.getItem("userInfo");
       if (stored) {
         const parsedInfo = JSON.parse(stored);
-        // Check if the stored info has a valid signature
-        if (!parsedInfo.signature) {
-          const newInfo = generateRandomIdentity();
-          // We'll validate and get signature in useEffect
-          return newInfo;
-        }
         return parsedInfo;
       }
       const newInfo = generateRandomIdentity();
-      // We'll validate and get signature in useEffect
       return newInfo;
     }
     return generateRandomIdentity();
@@ -78,7 +71,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Validate user info and get signature
   useEffect(() => {
     const validateUserInfo = async () => {
       try {
@@ -104,24 +96,13 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
           }
           throw new Error(data.error || "Failed to validate user info");
         }
-
-        const validatedInfo = await response.json();
-        const updatedInfo = {
-          ...userInfo,
-          signature: validatedInfo.signature,
-        };
-        setUserInfo(updatedInfo);
-        localStorage.setItem("userInfo", JSON.stringify(updatedInfo));
       } catch (error) {
         console.error("Error validating user info:", error);
       }
     };
 
-    // Only validate if we don't have a signature or the name is changed
-    if (!userInfo.signature) {
-      validateUserInfo();
-    }
-  }, [userInfo.id, userInfo.name, userInfo.emoji, userInfo]);
+    validateUserInfo();
+  }, [userInfo.id, userInfo.name, userInfo.emoji]);
 
   const handleUpdateUserInfo = async (name: string, emoji: string) => {
     try {
@@ -146,12 +127,10 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         throw new Error(data.error || "Failed to validate user info");
       }
 
-      const validatedInfo = await response.json();
       const updatedUserInfo = {
         ...userInfo,
         name,
         emoji,
-        signature: validatedInfo.signature,
       };
 
       setUserInfo(updatedUserInfo);
@@ -378,7 +357,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       userId: userInfo.id,
       userName: userInfo.name,
       userEmoji: userInfo.emoji,
-      signature: userInfo.signature, // Add signature for verification
+
       content: newMessage.trim(),
       createdAt: new Date().toISOString(),
     };
