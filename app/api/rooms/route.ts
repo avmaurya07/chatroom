@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       captchaTokenLength: captchaToken?.length,
     });
 
-    const headersList = headers();
+    const headersList = await headers();
     const ip = headersList.get("x-forwarded-for") || "unknown";
     console.log("Client IP:", ip);
 
