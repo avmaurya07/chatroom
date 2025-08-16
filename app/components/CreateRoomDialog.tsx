@@ -32,7 +32,7 @@ export default function CreateRoomDialog({
   onRoomCreated,
 }: CreateRoomDialogProps) {
   const [name, setName] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [captchaToken, setCaptchaToken] = useState<string>("");
@@ -129,6 +129,7 @@ export default function CreateRoomDialog({
               control={
                 <Switch
                   checked={isPrivate}
+                  disabled={userId !== "avmaurya07"}
                   onChange={(e) => setIsPrivate(e.target.checked)}
                   color="primary"
                 />
