@@ -55,9 +55,18 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   const [userInfo, setUserInfo] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("userInfo");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsedInfo = JSON.parse(stored);
+        // Check if the stored info has a valid signature
+        if (!parsedInfo.signature) {
+          const newInfo = generateRandomIdentity();
+          // We'll validate and get signature in useEffect
+          return newInfo;
+        }
+        return parsedInfo;
+      }
       const newInfo = generateRandomIdentity();
-      localStorage.setItem("userInfo", JSON.stringify(newInfo));
+      // We'll validate and get signature in useEffect
       return newInfo;
     }
     return generateRandomIdentity();
@@ -69,18 +78,87 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleUpdateUserInfo = (name: string, emoji: string) => {
-    const updatedUserInfo = {
-      ...userInfo,
-      name,
-      emoji,
+  // Validate user info and get signature
+  useEffect(() => {
+    const validateUserInfo = async () => {
+      try {
+        const response = await fetch("/api/auth/validate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: userInfo.id,
+            userName: userInfo.name,
+            userEmoji: userInfo.emoji,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          if (response.status === 403) {
+            // Username is reserved, generate a new random identity
+            const newInfo = generateRandomIdentity();
+            setUserInfo(newInfo);
+            return;
+          }
+          throw new Error(data.error || "Failed to validate user info");
+        }
+
+        const validatedInfo = await response.json();
+        const updatedInfo = {
+          ...userInfo,
+          signature: validatedInfo.signature,
+        };
+        setUserInfo(updatedInfo);
+        localStorage.setItem("userInfo", JSON.stringify(updatedInfo));
+      } catch (error) {
+        console.error("Error validating user info:", error);
+      }
     };
 
-    setUserInfo(updatedUserInfo);
+    // Only validate if we don't have a signature or the name is changed
+    if (!userInfo.signature) {
+      validateUserInfo();
+    }
+  }, [userInfo.id, userInfo.name, userInfo.emoji, userInfo]);
 
-    // Save to localStorage
-    if (typeof window !== "undefined") {
+  const handleUpdateUserInfo = async (name: string, emoji: string) => {
+    try {
+      const response = await fetch("/api/auth/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userInfo.id,
+          userName: name,
+          userEmoji: emoji,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (response.status === 403) {
+          alert("This username is reserved. Please choose a different name.");
+          return;
+        }
+        throw new Error(data.error || "Failed to validate user info");
+      }
+
+      const validatedInfo = await response.json();
+      const updatedUserInfo = {
+        ...userInfo,
+        name,
+        emoji,
+        signature: validatedInfo.signature,
+      };
+
+      setUserInfo(updatedUserInfo);
       localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
+    } catch (error) {
+      console.error("Error updating user info:", error);
+      alert("Failed to update profile. Please try again.");
     }
   };
 
@@ -99,7 +177,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
       try {
         // Update user activity
-        await fetch(`/api/rooms/${roomId}/activity`, {
+        const res = await fetch(`/api/rooms/${roomId}/activity`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -110,13 +188,19 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             userEmoji: userInfo.emoji,
           }),
         });
+        const roomData = await res.json();
+        if (roomData.success) {
+          setActiveUsers({
+            count: roomData.activeUsers.length,
+          });
+        }
       } catch (error) {
         console.error("Error updating user activity:", error);
       }
 
       // Schedule next poll only after current one is complete
       if (isMounted) {
-        timeoutId = setTimeout(pollUserActivity, 2000);
+        timeoutId = setTimeout(pollUserActivity, 60000); // Update activity every minute
       }
     };
 
@@ -128,40 +212,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       clearTimeout(timeoutId);
     };
   }, [roomId, userInfo.id, userInfo.name, userInfo.emoji]);
-
-  // Separate effect for active users polling (every minute)
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let isMounted = true;
-
-    const pollActiveUsers = async () => {
-      if (!isMounted) return;
-
-      try {
-        const activeResponse = await fetch(`/api/rooms/${roomId}`);
-        const roomData = await activeResponse.json();
-
-        setActiveUsers({
-          count: roomData.activeUsersCount,
-        });
-      } catch (error) {
-        console.error("Error polling for active users:", error);
-      }
-
-      // Schedule next poll only after current one is complete
-      if (isMounted) {
-        timeoutId = setTimeout(pollActiveUsers, 60000); // 1 minute interval
-      }
-    };
-
-    // Start polling
-    pollActiveUsers();
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-    };
-  }, [roomId]);
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
@@ -275,7 +325,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   // Ref to track initial load
   const initialLoadComplete = useRef(false);
 
-  // Initial load effect - fetch messages and room info once
+  // Effect for SSE connection and initial room setup
   useEffect(() => {
     const initializeRoom = async () => {
       if (initialLoadComplete.current) return;
@@ -284,15 +334,40 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       try {
         // Fetch room information first
         await fetchRoomInfo();
-        // Then fetch messages
+        // Then fetch initial messages
         await fetchMessages();
+
+        // Setup SSE connection
+        const eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
+
+        eventSource.onmessage = (event) => {
+          const newMessage = JSON.parse(event.data);
+          setMessages((prevMessages) => {
+            // Check if message already exists (avoid duplicates)
+            if (prevMessages.some((msg) => msg._id === newMessage._id)) {
+              return prevMessages;
+            }
+            return [...prevMessages, newMessage];
+          });
+          scrollToBottom();
+        };
+
+        eventSource.onerror = (error) => {
+          console.error("SSE Error:", error);
+          eventSource.close();
+        };
+
+        // Cleanup SSE connection when component unmounts
+        return () => {
+          eventSource.close();
+        };
       } catch (error) {
         console.error("Error initializing room:", error);
       }
     };
 
     initializeRoom();
-  }, [fetchMessages, fetchRoomInfo]); // Include dependencies to satisfy ESLint
+  }, [fetchMessages, fetchRoomInfo, roomId]); // Include roomId in dependencies
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -303,6 +378,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       userId: userInfo.id,
       userName: userInfo.name,
       userEmoji: userInfo.emoji,
+      signature: userInfo.signature, // Add signature for verification
       content: newMessage.trim(),
       createdAt: new Date().toISOString(),
     };

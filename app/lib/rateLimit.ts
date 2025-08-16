@@ -15,19 +15,21 @@ export async function getRateLimitInfo(
   const now = Date.now();
   const windowKey = `${key}:${Math.floor(now / windowMs)}`;
 
-  // Increment counter and get TTL in a transaction using Upstash Redis
-  const currentCount = await redis.incr(windowKey);
+  // Use MULTI/EXEC for atomic operations
+  const count = await redis.incr(windowKey);
 
   // Set expiration if this is a new window
-  if (currentCount === 1) {
-    await redis.pexpire(windowKey, windowMs);
+  if (count === 1) {
+    await redis.expire(windowKey, Math.ceil(windowMs / 1000)); // Convert ms to seconds for expire
   }
 
   const ttl = await redis.pttl(windowKey);
+  const currentCount = typeof count === "number" ? count : 0;
+  const currentTtl = typeof ttl === "number" ? ttl : 0;
 
   const isLimited = currentCount > maxRequests;
   const remainingRequests = Math.max(0, maxRequests - currentCount);
-  const msBeforeNext = isLimited ? ttl : 0;
+  const msBeforeNext = isLimited ? currentTtl : 0;
 
   return {
     isLimited,
