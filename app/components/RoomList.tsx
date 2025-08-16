@@ -27,15 +27,18 @@ export default function RoomList() {
   const [navigating, setNavigating] = useState(false);
   const router = useRouter();
   const { mode } = useColorMode();
-  const [userId] = useState(() => {
+  const [userInfo] = useState(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("userId");
-      if (stored) return stored;
-      const newId = generateRandomIdentity().id;
-      localStorage.setItem("userId", newId);
-      return newId;
+      const stored = localStorage.getItem("userInfo");
+      if (stored) {
+        const parsedInfo = JSON.parse(stored);
+        return parsedInfo;
+      }
+      const newInfo = generateRandomIdentity();
+      localStorage.setItem("userInfo", JSON.stringify(newInfo));
+      return newInfo;
     }
-    return "";
+    return generateRandomIdentity();
   });
 
   const fetchRooms = useCallback(async () => {
@@ -47,7 +50,7 @@ export default function RoomList() {
 
       try {
         const response = await fetch(
-          `/api/rooms?userId=${encodeURIComponent(userId)}`
+          `/api/rooms?userId=${encodeURIComponent(userInfo.id)}`
         );
         apiRooms = await response.json();
 
@@ -75,7 +78,7 @@ export default function RoomList() {
     } finally {
       setLoading(false);
     }
-  }, [userId]); // Add userId as dependency for useCallback
+  }, [userInfo.id]); // Add userInfo.id as dependency for useCallback
 
   useEffect(() => {
     // Fetch rooms once when component mounts
@@ -217,7 +220,7 @@ export default function RoomList() {
       <CreateRoomDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
-        userId={userId}
+        userId={userInfo.id}
         onRoomCreated={fetchRooms}
       />
 

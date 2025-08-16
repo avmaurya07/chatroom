@@ -60,6 +60,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         return parsedInfo;
       }
       const newInfo = generateRandomIdentity();
+      localStorage.setItem("userInfo", JSON.stringify(newInfo));
       return newInfo;
     }
     return generateRandomIdentity();
