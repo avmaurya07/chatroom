@@ -66,7 +66,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -321,9 +320,13 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         const eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
         console.log("Connecting to SSE stream:", `/api/rooms/${roomId}/stream`);
 
+        // Track messages we've already seen
+        const seenMessageIds = new Set();
+
         // Add all current messages to seen set
-        messages.forEach((msg) => {
-          if (msg._id) seenMessageIdsRef.current.add(msg._id);
+        setMessages((currentMessages) => {
+          currentMessages.forEach((msg) => seenMessageIds.add(msg._id));
+          return currentMessages;
         });
 
         // Handle connection events
@@ -358,56 +361,67 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             }
 
             // Handle actual messages
-            if (!data._id) return; // Skip messages without ID
+            // Avoid adding duplicate messages
+            if (data._id && !seenMessageIds.has(data._id)) {
+              seenMessageIds.add(data._id);
 
-            // First check if we've already seen this message ID
-            if (seenMessageIdsRef.current.has(data._id)) {
-              console.log("Skipping duplicate message with ID:", data._id);
-              return;
-            }
-
-            // Add the ID to our tracking set
-            seenMessageIdsRef.current.add(data._id);
-
-            setMessages((prevMessages) => {
-              // Double-check if message already exists in the current state
-              const existingMsg = prevMessages.find(
-                (msg) => msg._id === data._id
-              );
-
-              // Also check if we have a temporary message that should be replaced
-              const tempMsgIndex = prevMessages.findIndex(
-                (msg) =>
-                  msg.pending &&
-                  msg.userId === data.userId &&
-                  msg.content === data.content &&
-                  Math.abs(
-                    new Date(msg.createdAt).getTime() -
-                      new Date(data.createdAt).getTime()
-                  ) < 60000 // Within 1 minute
-              );
-
-              if (existingMsg) {
-                // Message already exists, don't add it again
-                return prevMessages;
-              } else if (tempMsgIndex >= 0) {
-                // Replace the temporary message with the server version
-                console.log(
-                  "Replacing temp message with server message:",
-                  data._id
+              setMessages((prevMessages) => {
+                // Check if this is a real message replacing a temporary one
+                const tempMessageIndex = prevMessages.findIndex(
+                  (msg) =>
+                    msg._id.startsWith("temp_") &&
+                    msg.userId === data.userId &&
+                    msg.content === data.content &&
+                    Math.abs(
+                      new Date(msg.createdAt).getTime() -
+                        new Date(data.createdAt).getTime()
+                    ) < 30000 // Within 30 seconds
                 );
-                const updatedMessages = [...prevMessages];
-                updatedMessages[tempMsgIndex] = data;
-                return updatedMessages;
-              } else {
-                // This is a genuinely new message
-                console.log("New message from SSE:", data);
-                return [...prevMessages, data];
-              }
-            });
 
-            // Scroll to the bottom for new messages
-            setTimeout(scrollToBottom, 100);
+                if (tempMessageIndex !== -1) {
+                  // Replace temporary message with real one
+                  const newMessages = [...prevMessages];
+                  newMessages[tempMessageIndex] = data;
+                  console.log(
+                    "Replaced temporary message with real message:",
+                    data
+                  );
+                  return newMessages;
+                }
+
+                // Also check if we already have this exact message ID
+                if (prevMessages.some((msg) => msg._id === data._id)) {
+                  return prevMessages;
+                }
+
+                // Additional check: if this is from current user and very recent, it might be a duplicate
+                // Check if we have a message with same content from same user within last 5 seconds
+                const now = new Date().getTime();
+                const isDuplicateRecent = prevMessages.some(
+                  (msg) =>
+                    msg.userId === data.userId &&
+                    msg.content === data.content &&
+                    msg.userId === userInfo.id && // Only check for current user's messages
+                    Math.abs(now - new Date(data.createdAt).getTime()) < 5000 // Within 5 seconds
+                );
+
+                if (isDuplicateRecent) {
+                  console.log(
+                    "Skipping duplicate recent message from current user:",
+                    data
+                  );
+                  return prevMessages;
+                }
+
+                // Add new message
+                console.log("New message from SSE:", data);
+                const newMessages = [...prevMessages, data];
+                return newMessages;
+              });
+
+              // Scroll to the bottom for new messages
+              setTimeout(scrollToBottom, 100);
+            }
           } catch (error) {
             console.error("Error processing SSE message:", error);
           }
@@ -433,7 +447,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     };
 
     initializeRoom();
-  }, [fetchMessages, fetchRoomInfo, roomId, messages]); // Include roomId and messages in dependencies
+  }, [fetchMessages, fetchRoomInfo, roomId, userInfo.id]); // Include roomId and userInfo.id in dependencies
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -485,9 +499,6 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
           );
           const sentMessage = await response.json();
 
-          // Add the server-generated ID to our seenMessageIds set to prevent duplicates
-          seenMessageIdsRef.current.add(sentMessage._id);
-
           // Replace temp message with the real one from server
           setMessages((prev) =>
             prev.map((msg) => (msg._id === tempMessage._id ? sentMessage : msg))
@@ -495,6 +506,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
           // Cache the message
           await saveMessageToLocal({ ...sentMessage, roomId, synced: true });
+
+          // Don't add this message again when it comes through SSE
+          // We'll let the SSE handler replace it if needed
         }
       } else {
         // We're offline, queue the message for later
