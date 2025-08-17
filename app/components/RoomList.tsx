@@ -211,10 +211,27 @@ export default function RoomList() {
           value={tabValue}
           onChange={handleTabChange}
           aria-label="room types"
+          variant="fullWidth"
+          sx={{ width: "100%" }}
         >
-          <Tab icon={<PublicIcon />} label="Public" iconPosition="start" />
-          <Tab icon={<LockIcon />} label="Private" iconPosition="start" />
-          <Tab icon={<PersonIcon />} label="Personal" iconPosition="start" />
+          <Tab
+            icon={<PublicIcon />}
+            label={<span className="hidden sm:inline">Public</span>}
+            iconPosition="start"
+            sx={{ minWidth: "33.33%", flex: 1 }}
+          />
+          <Tab
+            icon={<LockIcon />}
+            label={<span className="hidden sm:inline">Private</span>}
+            iconPosition="start"
+            sx={{ minWidth: "33.33%", flex: 1 }}
+          />
+          <Tab
+            icon={<PersonIcon />}
+            label={<span className="hidden sm:inline">Personal</span>}
+            iconPosition="start"
+            sx={{ minWidth: "33.33%", flex: 1 }}
+          />
         </Tabs>
       </Box>
 
