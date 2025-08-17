@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     let rooms;
     if (userId === "avmaurya07") {
       // Show all non-personal rooms for admin
-      rooms = await Room.find({})
+      rooms = await Room.find({ isPersonal: { $ne: true } })
         .select("name isPrivate lastActive")
         .sort({ lastActive: -1 });
     } else if (userId) {
