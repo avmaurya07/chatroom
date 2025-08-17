@@ -96,6 +96,17 @@ export async function POST(
       lastActive: new Date(),
     });
 
+    // If it's a personal chat, update p1 or p2 info if needed
+    if (room.isPersonal) {
+      if (room.p1?.id === userId) {
+        room.p1.name = userName;
+        room.p1.emoji = userEmoji;
+      } else if (room.p2?.id === userId) {
+        room.p2.name = userName;
+        room.p2.emoji = userEmoji;
+      }
+    }
+
     await room.save();
 
     // Get final list of active users after all updates

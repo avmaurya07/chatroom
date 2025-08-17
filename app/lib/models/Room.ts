@@ -13,6 +13,30 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  isPersonal: {
+    type: Boolean,
+    default: false,
+  },
+  p1: {
+    type: {
+      id: String,
+      name: String,
+      emoji: String,
+    },
+    required: function () {
+      return this.isPersonal;
+    },
+  },
+  p2: {
+    type: {
+      id: String,
+      name: String,
+      emoji: String,
+    },
+    required: function () {
+      return this.isPersonal;
+    },
+  },
   activeUsers: {
     type: Map,
     of: {

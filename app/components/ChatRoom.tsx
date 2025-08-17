@@ -9,6 +9,11 @@ import {
   Typography,
   Avatar,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -38,6 +43,7 @@ interface ChatRoomProps {
 }
 
 export default function ChatRoom({ roomId }: ChatRoomProps) {
+  const isAuthorizedRef = useRef(true);
   const router = useRouter();
   const { mode } = useColorMode();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,10 +54,39 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     _id: string;
     lastActive: string;
     activeUsersCount: number;
-  } | null>(null);
+    isPersonal?: boolean;
+    p1?: {
+      id: string;
+      name: string;
+      emoji: string;
+    };
+    p2?: {
+      id: string;
+      name: string;
+      emoji: string;
+    };
+  } | null>(null); // Default to true, will be set based on room info
   const [roomLoading, setRoomLoading] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [personalChatDialog, setPersonalChatDialog] = useState<{
+    open: boolean;
+    userName: string;
+    userEmoji: string;
+    userId: string;
+  }>({
+    open: false,
+    userName: "",
+    userEmoji: "",
+    userId: "",
+  });
+  const [unauthorizedDialog, setUnauthorizedDialog] = useState<{
+    open: boolean;
+    p1?: { name: string; id: string };
+    p2?: { name: string; id: string };
+  }>({
+    open: false,
+  });
   const [userInfo, setUserInfo] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("userInfo");
@@ -152,6 +187,16 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     let timeoutId: NodeJS.Timeout;
     let isMounted = true;
 
+    // Skip activity polling for personal rooms
+    if (roomInfo?.isPersonal) {
+      // Set active users to 2 and don't start polling
+      setActiveUsers({ count: 2 }); // Personal rooms always have 2 participants
+      return () => {
+        isMounted = false;
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+    }
+
     const pollUserActivity = async () => {
       if (!isMounted) return;
 
@@ -191,11 +236,23 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [roomId, userInfo.id, userInfo.name, userInfo.emoji]);
+  }, [
+    roomId,
+    userInfo.id,
+    userInfo.name,
+    userInfo.emoji,
+    roomInfo?.isPersonal,
+  ]);
 
   const fetchMessages = useCallback(async () => {
     setLoading(true);
     try {
+      // Only fetch messages if we have room info and no errors
+      // if (!roomInfo || roomError) {
+      //   setLoading(false);
+      //   return;
+      // }
+
       // Try to fetch from API first
       let apiMessages: Message[] = [];
       let fetchError = false;
@@ -243,12 +300,13 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     } finally {
       setLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, roomInfo, roomError]);
 
   const fetchRoomInfo = useCallback(async () => {
     try {
       setRoomLoading(true);
       setRoomError(null);
+      setMessages([]); // Clear messages when loading new room
 
       // Try to fetch from API
       let apiRoom = null;
@@ -285,13 +343,30 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
           // Add default activeUsersCount if missing
           setRoomInfo({
             ...localRoom,
-            activeUsersCount: localRoom.activeUsersCount || 0,
+            activeUsersCount: localRoom.activeUsersCount || 1,
           });
         } else {
           setRoomError("Room not found in cache. Check your connection.");
         }
       } else {
-        // Use API room if available
+        // Check authorization for personal chats before setting room info
+        if (apiRoom?.isPersonal) {
+          const authorized =
+            apiRoom.p1?.id === userInfo.id || apiRoom.p2?.id === userInfo.id;
+          isAuthorizedRef.current = authorized;
+          if (!authorized) {
+            setUnauthorizedDialog({
+              open: true,
+              p1: apiRoom.p1 || undefined,
+              p2: apiRoom.p2 || undefined,
+            });
+            setRoomError("Unauthorized: This is a private conversation");
+            setRoomLoading(false);
+            return;
+          }
+        }
+
+        // Use API room if available and authorized
         setRoomInfo(apiRoom);
       }
     } catch (error) {
@@ -300,9 +375,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     } finally {
       setRoomLoading(false);
     }
-  }, [roomId]);
-
-  // Ref to track initial load
+  }, [roomId, userInfo.id]); // Ref to track initial load
   const initialLoadComplete = useRef(false);
 
   // Effect for SSE connection and initial room setup
@@ -317,9 +390,15 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         // Then fetch initial messages
         await fetchMessages();
 
+        // Skip SSE connection for personal chats
+        if (roomInfo?.isPersonal) {
+          console.log("Skipping SSE connection for personal chat");
+          return;
+        }
+
         // Setup SSE connection
+
         const eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
-        console.log("Connecting to SSE stream:", `/api/rooms/${roomId}/stream`);
 
         // Track messages we've already seen
         const seenMessageIds = new Set();
@@ -448,7 +527,48 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     };
 
     initializeRoom();
-  }, [fetchMessages, fetchRoomInfo, roomId, userInfo.id]); // Include roomId and userInfo.id in dependencies
+  }, [fetchMessages, fetchRoomInfo, roomId, userInfo.id, roomInfo?.isPersonal]); // Include roomId, userInfo.id and isPersonal
+
+  const handleStartPersonalChat = (
+    otherUserId: string,
+    otherUserName: string,
+    otherUserEmoji: string
+  ) => {
+    setPersonalChatDialog({
+      open: true,
+      userId: otherUserId,
+      userName: otherUserName,
+      userEmoji: otherUserEmoji,
+    });
+  };
+
+  const createPersonalChat = async () => {
+    try {
+      const response = await fetch("/api/rooms/personal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId1: userInfo.id,
+          userId2: personalChatDialog.userId,
+          userName1: userInfo.name,
+          userName2: personalChatDialog.userName,
+          userEmoji1: userInfo.emoji,
+          userEmoji2: personalChatDialog.userEmoji,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.roomId) {
+        router.push(`/room/${data.roomId}`);
+      }
+      setPersonalChatDialog((prev) => ({ ...prev, open: false }));
+    } catch (error) {
+      console.error("Error creating personal chat:", error);
+      setPersonalChatDialog((prev) => ({ ...prev, open: false }));
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,36 +748,50 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                         className="room-name"
                         style={{ maxWidth: "100%", display: "inline-block" }}
                       >
-                        {roomInfo.name}
+                        {roomInfo.isPersonal
+                          ? (() => {
+                              // Find the other participant
+                              const otherPerson =
+                                roomInfo.p1?.id === userInfo.id
+                                  ? roomInfo.p2
+                                  : roomInfo.p1;
+                              return otherPerson
+                                ? `${otherPerson.emoji} ${otherPerson.name}`
+                                : roomInfo.name;
+                            })()
+                          : roomInfo.name}
                       </span>
                     ) : (
                       "Unknown Room"
                     )}
                   </Typography>
-                  {roomInfo && !roomLoading && !roomError && (
-                    <Box
-                      className={`inline-flex items-center px-2 py-1 rounded-full mt-1 sm:mt-0 ${
-                        mode === "dark"
-                          ? "bg-gray-700 text-green-400"
-                          : "bg-green-50 text-green-600"
-                      }`}
-                    >
-                      <div
-                        className={`w-2 h-2 rounded-full mr-2 ${
-                          activeUsers.count > 0
-                            ? "bg-green-400 animate-pulse"
-                            : "bg-gray-400"
+                  {roomInfo &&
+                    !roomLoading &&
+                    !roomError &&
+                    !roomInfo.isPersonal && (
+                      <Box
+                        className={`inline-flex items-center px-2 py-1 rounded-full mt-1 sm:mt-0 ${
+                          mode === "dark"
+                            ? "bg-gray-700 text-green-400"
+                            : "bg-green-50 text-green-600"
                         }`}
-                      />
-                      <Typography
-                        variant="caption"
-                        className="font-medium whitespace-nowrap"
                       >
-                        {activeUsers.count}{" "}
-                        {activeUsers.count === 1 ? "person" : "people"} online
-                      </Typography>
-                    </Box>
-                  )}
+                        <div
+                          className={`w-2 h-2 rounded-full mr-2 ${
+                            activeUsers.count > 0
+                              ? "bg-green-400 animate-pulse"
+                              : "bg-gray-400"
+                          }`}
+                        />
+                        <Typography
+                          variant="caption"
+                          className="font-medium whitespace-nowrap"
+                        >
+                          {activeUsers.count}{" "}
+                          {activeUsers.count === 1 ? "person" : "people"} online
+                        </Typography>
+                      </Box>
+                    )}
                 </div>
               </div>
             </div>
@@ -717,6 +851,12 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         >
           {roomLoading || loading ? (
             <MessageSkeleton count={5} />
+          ) : !isAuthorizedRef.current ? (
+            <Box className="text-center py-10">
+              <Typography variant="body1" color="textSecondary">
+                You are not authorized to view this conversation.
+              </Typography>
+            </Box>
           ) : messages.length > 0 ? (
             messages.map((message) => (
               <Box
@@ -748,7 +888,26 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                 >
                   <Box className="flex items-center gap-2 mb-1">
                     <span>{message.userEmoji}</span>
-                    <Typography variant="subtitle2" className="font-medium">
+                    <Typography
+                      variant="subtitle2"
+                      className={`font-medium ${
+                        !roomInfo?.isPersonal && message.userId !== userInfo.id
+                          ? "hover:underline cursor-pointer"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        if (
+                          !roomInfo?.isPersonal &&
+                          message.userId !== userInfo.id
+                        ) {
+                          handleStartPersonalChat(
+                            message.userId,
+                            message.userName,
+                            message.userEmoji
+                          );
+                        }
+                      }}
+                    >
                       {message.userName}
                     </Typography>
                   </Box>
@@ -837,6 +996,123 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
         currentEmoji={userInfo.emoji}
         onSave={handleUpdateUserInfo}
       />
+
+      {/* Personal Chat Dialog */}
+      <Dialog
+        open={personalChatDialog.open}
+        onClose={() =>
+          setPersonalChatDialog((prev) => ({ ...prev, open: false }))
+        }
+        PaperProps={{
+          elevation: 8,
+          className: mode === "dark" ? "bg-gray-800" : "bg-white",
+        }}
+      >
+        <DialogTitle className={mode === "dark" ? "text-white" : ""}>
+          Start Personal Chat
+        </DialogTitle>
+        <DialogContent className={mode === "dark" ? "text-white" : ""}>
+          <Box className="flex items-center gap-2 mt-2">
+            <Avatar className="bg-primary-light">
+              {personalChatDialog.userEmoji}
+            </Avatar>
+            <Typography variant="body1">
+              Would you like to start a personal chat with{" "}
+              <span className="font-semibold">
+                {personalChatDialog.userName}
+              </span>
+              ?
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button
+            onClick={() =>
+              setPersonalChatDialog((prev) => ({ ...prev, open: false }))
+            }
+            className={mode === "dark" ? "text-gray-300" : ""}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={createPersonalChat}
+            variant="contained"
+            color="primary"
+          >
+            Start Chat
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Unauthorized Access Dialog */}
+      <Dialog
+        open={unauthorizedDialog.open}
+        onClose={() =>
+          setUnauthorizedDialog((prev) => ({ ...prev, open: false }))
+        }
+        PaperProps={{
+          elevation: 8,
+          className: mode === "dark" ? "bg-gray-800" : "bg-white",
+        }}
+      >
+        <DialogTitle className={mode === "dark" ? "text-white" : ""}>
+          Private Conversation
+        </DialogTitle>
+        <DialogContent
+          className={`${
+            mode === "dark" ? "text-white" : ""
+          } text-center font-bold`}
+        >
+          Chat with
+          <Typography variant="body1" className="mb-4"></Typography>
+          <Box className="flex flex-col gap-3">
+            {unauthorizedDialog.p1 && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setUnauthorizedDialog((prev) => ({ ...prev, open: false }));
+                  handleStartPersonalChat(
+                    unauthorizedDialog.p1!.id,
+                    unauthorizedDialog.p1!.name,
+                    "🤔" // Default emoji since we don't have it
+                  );
+                }}
+                className={mode === "dark" ? "border-gray-600" : ""}
+              >
+                {unauthorizedDialog.p1.emoji} {unauthorizedDialog.p1.name}
+              </Button>
+            )}
+            {unauthorizedDialog.p2 && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setUnauthorizedDialog((prev) => ({ ...prev, open: false }));
+                  handleStartPersonalChat(
+                    unauthorizedDialog.p2!.id,
+                    unauthorizedDialog.p2!.name,
+                    "🤔" // Default emoji since we don't have it
+                  );
+                }}
+                className={mode === "dark" ? "border-gray-600" : ""}
+              >
+                {unauthorizedDialog.p2.emoji} {unauthorizedDialog.p2.name}
+              </Button>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions className="p-4">
+          <Button
+            onClick={() => {
+              setUnauthorizedDialog((prev) => ({ ...prev, open: false }));
+              router.push("/");
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Back to Rooms
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

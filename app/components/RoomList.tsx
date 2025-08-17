@@ -23,11 +23,21 @@ import { useColorMode } from "@/app/contexts/ThemeContext";
 import Image from "next/image";
 import ConnectionStatus from "./ConnectionStatus";
 
+interface UserInfo {
+  id: string;
+  name: string;
+  emoji: string;
+  _id: string;
+}
+
 interface Room {
   _id: string;
   name: string;
   isPrivate: boolean;
-  creatorId?: string;
+  isPersonal?: boolean;
+  p1: UserInfo;
+  p2: UserInfo;
+  creatorId: string;
   lastActive: string;
 }
 
@@ -62,10 +72,20 @@ export default function RoomList() {
       // let fetchError = false;
 
       try {
-        const response = await fetch(
+        // Fetch regular rooms
+        const roomsResponse = await fetch(
           `/api/rooms?userId=${encodeURIComponent(userInfo.id)}`
         );
-        apiRooms = await response.json();
+        const regularRooms = await roomsResponse.json();
+
+        // Fetch personal rooms
+        const personalRoomsResponse = await fetch(
+          `/api/rooms/personal?userId=${encodeURIComponent(userInfo.id)}`
+        );
+        const personalRooms = await personalRoomsResponse.json();
+
+        // Combine both types of rooms
+        apiRooms = [...regularRooms, ...(personalRooms.rooms || [])];
 
         // If successful, cache rooms for offline use
         if (Array.isArray(apiRooms) && apiRooms.length > 0) {
@@ -134,11 +154,15 @@ export default function RoomList() {
   const getFilteredRooms = () => {
     switch (tabValue) {
       case 0: // Public
-        return rooms.filter((room) => !room.isPrivate);
+        return rooms.filter((room) => !room.isPrivate && !room.isPersonal);
       case 1: // Private
-        return rooms.filter((room) => room.isPrivate);
+        return rooms.filter((room) => room.isPrivate && !room.isPersonal);
       case 2: // Personal
-        return []; // Empty for now, will show "coming soon"
+        return rooms.filter(
+          (room) =>
+            room.isPersonal &&
+            (room.p1.id === userInfo.id || room.p2.id === userInfo.id)
+        );
       default:
         return rooms;
     }
@@ -234,16 +258,16 @@ export default function RoomList() {
               </Paper>
             ))}
           </>
-        ) : tabValue === 2 ? (
-          // Personal tab - Coming Soon message
+        ) : tabValue === 2 && getFilteredRooms().length === 0 ? (
+          // No personal chats message
           <div className="col-span-3 text-center py-20">
             <PersonIcon sx={{ fontSize: 80, color: "text.secondary", mb: 2 }} />
             <Typography variant="h5" color="textSecondary" className="mb-2">
-              Personal Chats
+              No Personal Chats Yet
             </Typography>
             <Typography variant="body1" color="textSecondary">
-              Coming very soon! Personal chats will allow you to have private
-              conversations.
+              Click on someone&apos;s name in a chat room to start a personal
+              conversation.
             </Typography>
           </div>
         ) : getFilteredRooms().length > 0 ? (
@@ -274,13 +298,21 @@ export default function RoomList() {
                 variant="h6"
                 className="mb-3 font-semibold truncate pr-8"
               >
-                {room.name}
+                {room.isPersonal
+                  ? `${
+                      userInfo.id === room.p1.id
+                        ? `${room.p2.name} ${room.p2.emoji}`
+                        : `${room.p1.name} ${room.p1.emoji}`
+                    }`
+                  : room.name}
               </Typography>
               <div className="flex items-center justify-between mt-auto">
                 <Typography
                   variant="body2"
                   className={`py-1 px-2 rounded-full flex items-center gap-1 ${
-                    room.isPrivate
+                    room.isPersonal
+                      ? "bg-purple-100 text-purple-800"
+                      : room.isPrivate
                       ? "bg-orange-100 text-orange-800"
                       : "bg-emerald-100 text-emerald-800"
                   }`}

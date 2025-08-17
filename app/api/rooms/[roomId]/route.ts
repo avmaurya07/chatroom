@@ -64,6 +64,9 @@ export async function GET(
       name: room.name,
       lastActive: room.lastActive,
       activeUsersCount: activeUsersCount,
+      isPersonal: room.isPersonal,
+      p1: room.p1,
+      p2: room.p2,
     });
   } catch (error) {
     console.error("Error fetching room:", error);
