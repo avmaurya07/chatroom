@@ -23,7 +23,7 @@ const roomSchema = new mongoose.Schema({
       name: String,
       emoji: String,
     },
-    required: function () {
+    required: function (this: { isPersonal?: boolean }) {
       return this.isPersonal;
     },
   },
@@ -33,7 +33,7 @@ const roomSchema = new mongoose.Schema({
       name: String,
       emoji: String,
     },
-    required: function () {
+    required: function (this: { isPersonal?: boolean }) {
       return this.isPersonal;
     },
   },

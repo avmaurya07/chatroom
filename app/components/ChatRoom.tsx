@@ -82,8 +82,8 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
   });
   const [unauthorizedDialog, setUnauthorizedDialog] = useState<{
     open: boolean;
-    p1?: { name: string; id: string };
-    p2?: { name: string; id: string };
+    p1?: { name: string; id: string; emoji?: string };
+    p2?: { name: string; id: string; emoji?: string };
   }>({
     open: false,
   });
@@ -300,7 +300,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     } finally {
       setLoading(false);
     }
-  }, [roomId, roomInfo, roomError]);
+  }, [roomId]);
 
   const fetchRoomInfo = useCallback(async () => {
     try {

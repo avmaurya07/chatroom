@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import connectDB from "@/app/lib/mongodb";
 import { Room } from "@/app/lib/models/Room";
-import { checkRateLimit } from "@/app/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
