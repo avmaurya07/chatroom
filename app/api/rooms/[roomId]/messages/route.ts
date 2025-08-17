@@ -49,9 +49,9 @@ export async function POST(
 
     // Rate limit: 30 messages per minute per user per room
     const rateLimitResponse = await checkRateLimit(
-      `send-message:${messageData.userId}:${roomId}`,
+      `message:${roomId}:${messageData.userName}`,
       60 * 1000, // 1 minute window
-      30, // max 30 messages per minute
+      30, // 30 messages per minute
       ip
     );
 
@@ -99,6 +99,8 @@ export async function POST(
       console.error("Redis error:", redisError);
       // Even if Redis fails, we can still return the saved message
     }
+
+    // Always return a response
     return NextResponse.json(savedMessage);
   } catch (error) {
     console.error("Failed to create message:", error);

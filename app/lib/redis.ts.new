@@ -44,37 +44,37 @@ class MockRedis {
     if (!this.store[key]) {
       this.store[key] = [];
     }
-
+    
     if (!Array.isArray(this.store[key])) {
       this.store[key] = [String(this.store[key])];
     }
-
+    
     // TypeScript will complain about this, but we're treating it as a string array
     const list = this.store[key] as string[];
-
+    
     // lpush prepends items to the list
     const newList = [...values, ...list];
     this.store[key] = newList;
-
+    
     return newList.length;
   }
-
+  
   async ltrim(key: string, start: number, stop: number) {
     this.checkExpiration(key);
     if (!this.store[key]) {
       return "OK";
     }
-
+    
     if (!Array.isArray(this.store[key])) {
       this.store[key] = [String(this.store[key])];
     }
-
+    
     // TypeScript will complain about this, but we're treating it as a string array
     const list = this.store[key] as string[];
-
+    
     // ltrim keeps elements from start to stop (inclusive)
     this.store[key] = list.slice(start, stop + 1);
-
+    
     return "OK";
   }
 
@@ -90,7 +90,7 @@ class MockRedis {
   async publish(channel: string, message: string) {
     console.log(`Publishing to ${channel}: ${message} (mock implementation)`);
     if (this.callbacks[channel]) {
-      this.callbacks[channel].forEach((callback) => callback(message));
+      this.callbacks[channel].forEach(callback => callback(message));
     }
     return 0;
   }
@@ -106,9 +106,8 @@ class MockRedis {
 let redisInstance: Redis | MockRedis;
 
 // Check if we're in development mode or if credentials are missing
-const isDev = process.env.NODE_ENV === "development";
-const hasRedisCredentials =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+const isDev = process.env.NODE_ENV === 'development';
+const hasRedisCredentials = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!isDev && hasRedisCredentials) {
   try {
@@ -119,10 +118,7 @@ if (!isDev && hasRedisCredentials) {
     });
     console.log("Connected to Upstash Redis");
   } catch (error) {
-    console.warn(
-      "Failed to connect to Redis, using in-memory mock instead:",
-      error
-    );
+    console.warn("Failed to connect to Redis, using in-memory mock instead:", error);
     redisInstance = new MockRedis();
   }
 } else {
@@ -130,6 +126,5 @@ if (!isDev && hasRedisCredentials) {
   redisInstance = new MockRedis();
 }
 
-// Use type assertion to indicate this is compatible with Redis
-// We're implementing just the methods we need from the Redis interface
-export default redisInstance as Redis;
+// Cast to any to avoid TypeScript errors with our mock implementation
+export default redisInstance as any;
