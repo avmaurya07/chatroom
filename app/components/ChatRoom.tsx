@@ -54,6 +54,7 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
     _id: string;
     lastActive: string;
     activeUsersCount: number;
+    isPrivate?: boolean;
     isPersonal?: boolean;
     p1?: {
       id: string;
@@ -935,55 +936,61 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
           <div ref={messagesEndRef}></div>
         </Box>
 
-        <Box
-          className={`p-3 border-t ${
-            mode === "dark"
-              ? "border-gray-700 bg-gray-800"
-              : "border-gray-200 bg-white"
-          }`}
-        >
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Type a message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              size="small"
-              className={`rounded-full ${mode === "dark" ? "bg-gray-700" : ""}`}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "9999px",
-                  ...(mode === "dark" && {
-                    backgroundColor: "rgba(55, 65, 81, 0.8)",
-                  }),
-                },
-                "& .MuiOutlinedInput-input": {
-                  ...(mode === "dark" && {
-                    color: "#fff",
-                  }),
-                },
-                "& .MuiOutlinedInput-notchedOutline": {
-                  ...(mode === "dark" && {
-                    borderColor: "rgba(75, 85, 99, 0.5)",
-                  }),
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  ...(mode === "dark" && {
-                    borderColor: "rgba(156, 163, 175, 0.5)",
-                  }),
-                },
-              }}
-            />
-            <IconButton
-              type="submit"
-              disabled={!newMessage.trim()}
-              className="text-blue-500"
-            >
-              <SendIcon className="text-blue-500" />
-            </IconButton>
-          </form>
-        </Box>
+        {(roomInfo?.isPrivate ||
+          roomInfo?.isPersonal ||
+          userInfo.id === "avmaurya07") && (
+          <Box
+            className={`p-3 border-t ${
+              mode === "dark"
+                ? "border-gray-700 bg-gray-800"
+                : "border-gray-200 bg-white"
+            }`}
+          >
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Type a message..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                size="small"
+                className={`rounded-full ${
+                  mode === "dark" ? "bg-gray-700" : ""
+                }`}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "9999px",
+                    ...(mode === "dark" && {
+                      backgroundColor: "rgba(55, 65, 81, 0.8)",
+                    }),
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    ...(mode === "dark" && {
+                      color: "#fff",
+                    }),
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    ...(mode === "dark" && {
+                      borderColor: "rgba(75, 85, 99, 0.5)",
+                    }),
+                  },
+                  "&:hover .MuiOutlinedInput-notchedOutline": {
+                    ...(mode === "dark" && {
+                      borderColor: "rgba(156, 163, 175, 0.5)",
+                    }),
+                  },
+                }}
+              />
+              <IconButton
+                type="submit"
+                disabled={!newMessage.trim()}
+                className="text-blue-500"
+              >
+                <SendIcon className="text-blue-500" />
+              </IconButton>
+            </form>
+          </Box>
+        )}
       </Paper>
 
       {/* Connection status indicator */}

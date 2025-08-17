@@ -64,6 +64,7 @@ export async function GET(
       name: room.name,
       lastActive: room.lastActive,
       activeUsersCount: activeUsersCount,
+      isPrivate: room.isPrivate,
       isPersonal: room.isPersonal,
       p1: room.p1,
       p2: room.p2,
