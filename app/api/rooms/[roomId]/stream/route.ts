@@ -9,12 +9,11 @@ const roomSubscribers: Record<
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ roomId: string }> | { roomId: string } }
+  context: { params: Promise<{ roomId: string }> }
 ) {
   try {
-    // Handle both Promise-based and direct params
-    const params =
-      context.params instanceof Promise ? await context.params : context.params;
+    // Get params from the promise
+    const params = await context.params;
     const { roomId } = params;
     const streamKey = `room:${roomId}:stream`;
 
