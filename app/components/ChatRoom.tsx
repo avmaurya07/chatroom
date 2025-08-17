@@ -797,50 +797,52 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
             </div>
           </div>
           <Box className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Theme toggling functionality has been removed */}
-            <Box
-              className={`flex items-center ${
-                mode === "dark" ? "bg-gray-800" : "bg-gray-100"
-              } p-2 rounded-full`}
-              sx={{
-                maxWidth: {
-                  xs: "unset",
-                  sm: "unset",
-                },
-              }}
-            >
-              <Avatar className="bg-primary-light flex-shrink-0">
-                {userInfo.emoji}
-              </Avatar>
-              <Typography className="ml-2 font-medium truncate">
-                {userInfo.name}
-              </Typography>
-              <Box sx={{ display: "flex" }}>
-                {userInfo.id !== "avmaurya07" && (
-                  <>
-                    <Tooltip title="Edit profile">
-                      <IconButton
-                        onClick={() => setProfileEditorOpen(true)}
-                        size="small"
-                        className="ml-1"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+            {/* Only show profile in non-personal rooms */}
+            {!roomInfo?.isPersonal && (
+              <Box
+                className={`flex items-center ${
+                  mode === "dark" ? "bg-gray-800" : "bg-gray-100"
+                } p-2 rounded-full`}
+                sx={{
+                  maxWidth: {
+                    xs: "unset",
+                    sm: "unset",
+                  },
+                }}
+              >
+                <Avatar className="bg-primary-light flex-shrink-0">
+                  {userInfo.emoji}
+                </Avatar>
+                <Typography className="ml-2 font-medium truncate">
+                  {userInfo.name}
+                </Typography>
+                <Box sx={{ display: "flex" }}>
+                  {userInfo.id !== "avmaurya07" && (
+                    <>
+                      <Tooltip title="Edit profile">
+                        <IconButton
+                          onClick={() => setProfileEditorOpen(true)}
+                          size="small"
+                          className="ml-1"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
 
-                    <Tooltip title="Generate random identity">
-                      <IconButton
-                        onClick={regenerateIdentity}
-                        size="small"
-                        className="ml-1"
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </>
-                )}
+                      <Tooltip title="Generate random identity">
+                        <IconButton
+                          onClick={regenerateIdentity}
+                          size="small"
+                          className="ml-1"
+                        >
+                          <RefreshIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                </Box>
               </Box>
-            </Box>
+            )}
           </Box>
         </Box>
 
@@ -886,31 +888,30 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
                         : "0 1px 2px rgba(0,0,0,0.05)",
                   }}
                 >
-                  <Box className="flex items-center gap-2 mb-1">
-                    <span>{message.userEmoji}</span>
-                    <Typography
-                      variant="subtitle2"
-                      className={`font-medium ${
-                        !roomInfo?.isPersonal && message.userId !== userInfo.id
-                          ? "hover:underline cursor-pointer"
-                          : ""
-                      }`}
-                      onClick={() => {
-                        if (
-                          !roomInfo?.isPersonal &&
+                  {!roomInfo?.isPersonal && (
+                    <Box className="flex items-center gap-2 mb-1">
+                      <span>{message.userEmoji}</span>
+                      <Typography
+                        variant="subtitle2"
+                        className={`font-medium ${
                           message.userId !== userInfo.id
-                        ) {
-                          handleStartPersonalChat(
-                            message.userId,
-                            message.userName,
-                            message.userEmoji
-                          );
-                        }
-                      }}
-                    >
-                      {message.userName}
-                    </Typography>
-                  </Box>
+                            ? "hover:underline cursor-pointer"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          if (message.userId !== userInfo.id) {
+                            handleStartPersonalChat(
+                              message.userId,
+                              message.userName,
+                              message.userEmoji
+                            );
+                          }
+                        }}
+                      >
+                        {message.userName}
+                      </Typography>
+                    </Box>
+                  )}
                   <Typography className="text-left">
                     {message.content}
                   </Typography>
