@@ -5,6 +5,7 @@ class MockRedis {
   private store: Record<string, string | number | string[]> = {};
   private expirations: Record<string, number> = {};
   private callbacks: Record<string, Array<(message: string) => void>> = {};
+  private _globalCallback?: (channel: string, message: string) => void;
 
   async get(key: string) {
     this.checkExpiration(key);
@@ -78,21 +79,27 @@ class MockRedis {
     return "OK";
   }
 
-  async subscribe(channel: string, callback: (message: string) => void) {
+  async subscribe(channel: string) {
     if (!this.callbacks[channel]) {
       this.callbacks[channel] = [];
     }
-    this.callbacks[channel].push(callback);
     console.log(`Subscribed to channel: ${channel} (mock implementation)`);
-    return;
+    return 1;
+  }
+
+  // This is a mock-specific method that won't exist in the real Redis client
+  onMessage(callback: (channel: string, message: string) => void) {
+    // Store the callback for all channels
+    this._globalCallback = callback;
+    return this;
   }
 
   async publish(channel: string, message: string) {
     console.log(`Publishing to ${channel}: ${message} (mock implementation)`);
-    if (this.callbacks[channel]) {
-      this.callbacks[channel].forEach((callback) => callback(message));
+    if (this._globalCallback) {
+      this._globalCallback(channel, message);
     }
-    return 0;
+    return 1;
   }
 
   private checkExpiration(key: string) {
