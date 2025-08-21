@@ -125,28 +125,30 @@ export default function CreateRoomDialog({
             <Typography variant="h6" className="mb-3 text-gray-800 font-medium">
               Room Privacy
             </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isPrivate}
-                  disabled={userId !== "avmaurya07"}
-                  onChange={(e) => setIsPrivate(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label={
-                <Box className="flex items-center gap-2">
-                  {isPrivate ? (
-                    <LockIcon className="text-orange-600" fontSize="small" />
-                  ) : (
-                    <PublicIcon className="text-green-600" fontSize="small" />
-                  )}
-                  <span className="font-medium">
-                    {isPrivate ? "Private Room" : "Public Room"}
-                  </span>
-                </Box>
-              }
-            />
+            {userId === "avmaurya07" && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isPrivate}
+                    disabled={userId !== "avmaurya07"}
+                    onChange={(e) => setIsPrivate(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box className="flex items-center gap-2">
+                    {isPrivate ? (
+                      <LockIcon className="text-orange-600" fontSize="small" />
+                    ) : (
+                      <PublicIcon className="text-green-600" fontSize="small" />
+                    )}
+                    <span className="font-medium">
+                      {isPrivate ? "Private Room" : "Public Room"}
+                    </span>
+                  </Box>
+                }
+              />
+            )}
             <Typography variant="body2" className="mt-2 text-gray-600">
               {isPrivate
                 ? "🔒 Only you can see this room in the room list. Others can join with an invite link."

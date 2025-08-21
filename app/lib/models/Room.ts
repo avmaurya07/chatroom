@@ -66,6 +66,13 @@ const roomSchema = new mongoose.Schema({
 });
 
 // Add index for auto-deletion after 24 hours of inactivity
-roomSchema.index({ lastActive: 1 }, { expireAfterSeconds: 86400 });
+// Only create TTL index for private rooms
+roomSchema.index(
+  { lastActive: 1 },
+  {
+    expireAfterSeconds: 86400,
+    partialFilterExpression: { isPrivate: true },
+  }
+);
 
 export const Room = mongoose.models.Room || mongoose.model("Room", roomSchema);

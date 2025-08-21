@@ -28,8 +28,15 @@ const messageSchema = new mongoose.Schema({
   },
 });
 
-// Add index for auto-deletion after 24 hours
-messageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
-
+// Add index for auto-deletion after 24 hours except for messages from avmaurya07 in non-private rooms
+messageSchema.index(
+  { createdAt: 1 },
+  {
+    expireAfterSeconds: 86400,
+    partialFilterExpression: {
+      $or: [{ userId: { $ne: "avmaurya07" } }, { "room.isPrivate": true }],
+    },
+  }
+);
 export const Message =
   mongoose.models.Message || mongoose.model("Message", messageSchema);
