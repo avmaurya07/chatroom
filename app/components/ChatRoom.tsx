@@ -203,17 +203,20 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
       try {
         // Update user activity
-        const res = await fetch(`/api/rooms/${roomId}/activity`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: userInfo.id,
-            userName: userInfo.name,
-            userEmoji: userInfo.emoji,
-          }),
-        });
+        const res = await fetch(
+          `https://mak-doctor-plus.vercel.app/api/rooms/${roomId}/activity`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: userInfo.id,
+              userName: userInfo.name,
+              userEmoji: userInfo.emoji,
+            }),
+          }
+        );
         const roomData = await res.json();
         if (roomData.success) {
           setActiveUsers({
@@ -259,7 +262,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       let fetchError = false;
 
       try {
-        const response = await fetch(`/api/rooms/${roomId}/messages`);
+        const response = await fetch(
+          `https://mak-doctor-plus.vercel.app/api/rooms/${roomId}/messages`
+        );
         apiMessages = await response.json();
 
         // If successful, cache messages for offline use
@@ -314,7 +319,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       let fetchError = false;
 
       try {
-        const response = await fetch(`/api/rooms/${roomId}`);
+        const response = await fetch(
+          `https://mak-doctor-plus.vercel.app/api/rooms/${roomId}`
+        );
 
         if (response.ok) {
           apiRoom = await response.json();
@@ -399,7 +406,9 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
         // Setup SSE connection
 
-        const eventSource = new EventSource(`/api/rooms/${roomId}/stream`);
+        const eventSource = new EventSource(
+          `https://mak-doctor-plus.vercel.app/api/rooms/${roomId}/stream`
+        );
 
         // Track messages we've already seen
         const seenMessageIds = new Set();
@@ -545,20 +554,23 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
 
   const createPersonalChat = async () => {
     try {
-      const response = await fetch("/api/rooms/personal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId1: userInfo.id,
-          userId2: personalChatDialog.userId,
-          userName1: userInfo.name,
-          userName2: personalChatDialog.userName,
-          userEmoji1: userInfo.emoji,
-          userEmoji2: personalChatDialog.userEmoji,
-        }),
-      });
+      const response = await fetch(
+        "https://mak-doctor-plus.vercel.app/api/rooms/personal",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId1: userInfo.id,
+            userId2: personalChatDialog.userId,
+            userName1: userInfo.name,
+            userName2: personalChatDialog.userName,
+            userEmoji1: userInfo.emoji,
+            userEmoji2: personalChatDialog.userEmoji,
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.roomId) {
@@ -606,13 +618,16 @@ export default function ChatRoom({ roomId }: ChatRoomProps) {
       // Check if we're online
       if (navigator.onLine) {
         // We're online, send to API
-        const response = await fetch(`/api/rooms/${roomId}/messages`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(message),
-        });
+        const response = await fetch(
+          `https://mak-doctor-plus.vercel.app/api/rooms/${roomId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(message),
+          }
+        );
 
         if (response.ok) {
           // Message sent successfully
