@@ -10,9 +10,9 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/rooms/:path*/stream",
+        source: "/api/:path*",
         destination:
-          "http://ec2-54-87-136-240.compute-1.amazonaws.com:3000/api/rooms/:path*/stream",
+          "http://ec2-54-87-136-240.compute-1.amazonaws.com:3000/api/:path*",
       },
     ];
   },
